@@ -253,6 +253,120 @@ function OrdersScreen() {
 }
 ```
 
+### Server Sync
+
+Configure server synchronization for loading and saving state to a backend API.
+
+```tsx
+import { defineConfig, useSync, useStore } from 'protomobilekit'
+
+// Configure sync handlers at app startup
+defineConfig({
+  data: {
+    // Pull data from server
+    onPull: async () => {
+      const response = await fetch('/api/data')
+      const data = await response.json()
+      // Return format: { CollectionName: { id: entity, ... }, ... }
+      return {
+        Order: data.orders.reduce((acc, o) => ({ ...acc, [o.id]: o }), {}),
+        Product: data.products.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}),
+      }
+    },
+    // Push data to server
+    onPush: async (data) => {
+      await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+    },
+  },
+})
+
+// Use sync in components
+function DataManager() {
+  const { pull, push, isSyncing, lastSyncAt } = useSync()
+
+  useEffect(() => {
+    // Load data on mount
+    pull()
+  }, [])
+
+  return (
+    <Button onPress={push} disabled={isSyncing}>
+      {isSyncing ? 'Syncing...' : 'Save to Server'}
+    </Button>
+  )
+}
+```
+
+#### Direct Store Access
+
+For advanced use cases, access the store directly:
+
+```tsx
+import { useStore } from 'protomobilekit'
+
+// Get store instance (outside React)
+const store = useStore.getState()
+
+// Read all entities
+const allOrders = store.getAll('Order')
+
+// Query with predicate
+const pendingOrders = store.query('Order', o => o.status === 'pending')
+
+// Create entity
+store.create('Order', { status: 'pending', total: 100 })
+
+// Update entity
+store.update('Order', 'order-id', { status: 'confirmed' })
+
+// Delete entity
+store.delete('Order', 'order-id')
+
+// Merge remote data
+store._mergeData({
+  Order: { 'o1': { id: 'o1', status: 'new', ... } }
+})
+
+// Get all data (for sync)
+const allData = store._getData()
+```
+
+#### Initial Data Seeding
+
+Seed data at app startup (useful for demos):
+
+```tsx
+import { useStore, resetStore } from 'protomobilekit'
+
+function seedData() {
+  const store = useStore.getState()
+
+  // Check if already seeded
+  if (store.getAll('Product').length > 0) return
+
+  // Create initial data (silent = no events)
+  store.create('Product', {
+    id: 'p1',
+    name: 'Pizza',
+    price: 15
+  }, { silent: true })
+
+  store.create('Product', {
+    id: 'p2',
+    name: 'Burger',
+    price: 12
+  }, { silent: true })
+}
+
+// Call at app startup
+resetStore() // Clear old data
+seedData()
+```
+
 ## Components
 
 ### Layout
