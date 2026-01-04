@@ -1,0 +1,324 @@
+# ProtoMobileKit - Cursor AI Rules
+
+You are working on ProtoMobileKit, a React component library for mobile app prototyping. Part of the FlowCraft ecosystem.
+
+## Project Structure
+
+```
+mobilekit/
+├── src/
+│   ├── index.ts           # Main exports
+│   ├── ui/                 # UI components
+│   │   ├── theme.tsx       # Theme provider and colors
+│   │   ├── Button.tsx      # Buttons
+│   │   ├── Input.tsx       # Form inputs
+│   │   ├── List.tsx        # Lists and items
+│   │   ├── Modal.tsx       # Modals and overlays
+│   │   └── ...
+│   ├── navigation/         # Navigation system
+│   │   ├── Navigator.tsx   # Stack/tab navigator
+│   │   └── types.ts
+│   ├── auth/               # Authentication
+│   │   ├── OTPAuth.tsx     # OTP login component
+│   │   ├── hooks.ts        # useAuth, useIsAuthenticated
+│   │   ├── registry.ts     # defineUsers, defineRoles
+│   │   └── store.ts        # Auth state
+│   ├── store/              # State management
+│   │   ├── entities.ts     # Entity CRUD
+│   │   └── hooks.ts        # useRepo, useQuery
+│   ├── canvas/             # DevTools
+│   │   └── Canvas.tsx      # Multi-app preview
+│   ├── frames/             # Screen frames
+│   │   └── registry.ts     # defineFrames, defineFlow
+│   └── events/             # Event bus
+├── dist/                   # Build output
+├── package.json
+├── tsconfig.json
+└── tsup.config.ts
+```
+
+## Code Style
+
+### TypeScript
+- Use strict TypeScript with explicit types
+- Export all public types from index.ts
+- Use interfaces for props, types for unions
+- Prefix internal types with underscore
+
+```tsx
+// Good
+export interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'danger'
+  size?: 'sm' | 'md' | 'lg'
+  onClick?: () => void
+  children: React.ReactNode
+}
+
+// Bad - missing types
+export function Button({ variant, onClick, children }) { ... }
+```
+
+### Components
+- Use function components with explicit return types
+- Props interface named `ComponentNameProps`
+- Export component and props type together
+- Use `cn()` for className merging (tailwind-merge + clsx)
+
+```tsx
+export interface CardProps {
+  children: React.ReactNode
+  onPress?: () => void
+  className?: string
+}
+
+export function Card({ children, onPress, className }: CardProps) {
+  const { colors } = useTheme()
+
+  return (
+    <div
+      className={cn(
+        'rounded-xl shadow-sm',
+        onPress && 'cursor-pointer active:scale-[0.98]',
+        className
+      )}
+      style={{ backgroundColor: colors.surface }}
+      onClick={onPress}
+    >
+      {children}
+    </div>
+  )
+}
+```
+
+### Styling
+- Use Tailwind CSS classes for layout/spacing
+- Use `useTheme()` colors for dynamic theming
+- Support both iOS and Android platform styles
+- Keep styles inline with `style` prop for theme colors
+
+```tsx
+const { colors, platform } = useTheme()
+const isIOS = platform === 'ios'
+
+<div
+  className={cn(
+    'px-4 py-2',
+    isIOS ? 'rounded-lg' : 'rounded-md'
+  )}
+  style={{
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+  }}
+/>
+```
+
+### Theme Colors
+The theme uses a monochrome palette for prototyping:
+
+```tsx
+colors.primary       // #000000 - Primary actions
+colors.primaryText   // #FFFFFF - Text on primary
+colors.background    // #F5F5F5 - Page background
+colors.surface       // #FFFFFF - Card/component background
+colors.text          // #000000 - Primary text
+colors.textSecondary // #666666 - Secondary text
+colors.border        // #E5E5E5 - Borders
+colors.danger        // #FF3B30 - Destructive actions
+colors.success       // #34C759 - Success states
+```
+
+### Hooks
+- Prefix custom hooks with `use`
+- Return object with named properties
+- Handle loading/error states
+
+```tsx
+export function useQuery<T>(
+  collection: string,
+  options?: QueryOptions<T>
+): { items: T[]; loading: boolean } {
+  // Implementation
+}
+```
+
+### Navigation
+- Screen components receive `navigation` and `params` props
+- Use `useNavigate()` for navigation actions
+- Use `useRoute()` for route params
+
+```tsx
+function DetailsScreen() {
+  const { goBack, navigate } = useNavigate()
+  const { params } = useRoute<{ id: string }>()
+
+  return (
+    <Screen
+      header={
+        <Header
+          title="Details"
+          left={<BackButton onPress={goBack} />}
+        />
+      }
+    >
+      <Text>Item ID: {params.id}</Text>
+    </Screen>
+  )
+}
+```
+
+## Component Guidelines
+
+### Screen Structure
+Every screen should follow this pattern:
+
+```tsx
+function MyScreen() {
+  return (
+    <Screen
+      header={<Header title="Title" />}
+      footer={<ActionFooter actions={{ label: 'Save', onPress: save }} />}
+    >
+      <ScrollView padding="md">
+        {/* Content */}
+      </ScrollView>
+    </Screen>
+  )
+}
+```
+
+### Forms
+Use the form system for validation:
+
+```tsx
+const form = useForm({
+  values: { email: '', password: '' },
+  validate: {
+    email: validators.email('Invalid email'),
+    password: validators.required('Password required'),
+  },
+  onSubmit: async (values) => {
+    // Handle submission
+  },
+})
+
+<Form form={form}>
+  <FormField name="email" label="Email">
+    <Input type="email" placeholder="you@example.com" />
+  </FormField>
+  <FormField name="password" label="Password">
+    <Input type="password" />
+  </FormField>
+</Form>
+```
+
+### Lists
+Use List component for performance:
+
+```tsx
+<List
+  items={data}
+  keyExtractor={(item) => item.id}
+  renderItem={(item) => (
+    <ListItem
+      left={<Avatar src={item.avatar} />}
+      subtitle={item.subtitle}
+      showChevron
+      onPress={() => navigate('details', { id: item.id })}
+    >
+      {item.title}
+    </ListItem>
+  )}
+/>
+```
+
+## State Management
+
+### Entity Store
+Define entities with schemas:
+
+```tsx
+defineEntity('Order', {
+  status: 'pending',
+  customerId: '',
+  items: '[]',
+  total: 0,
+})
+```
+
+### CRUD Operations
+Use `useRepo` for mutations, `useQuery` for reads:
+
+```tsx
+const orders = useRepo<Order>('Order')
+const { items } = useQuery<Order>('Order', {
+  filter: (o) => o.status === 'active',
+})
+
+// Create
+orders.create({ status: 'pending', total: 100 })
+
+// Update
+orders.update(id, { status: 'confirmed' })
+
+// Delete
+orders.remove(id)
+```
+
+## Testing Users
+
+Define test users for DevTools quick switching:
+
+```tsx
+defineUsers({
+  appId: 'customer',
+  users: [
+    { id: 'alice', name: 'Alice', phone: '+1234567890', role: 'premium' },
+    { id: 'bob', name: 'Bob', phone: '+0987654321', role: 'regular' },
+  ],
+})
+```
+
+## Common Patterns
+
+### Conditional Rendering
+```tsx
+{isLoading ? (
+  <Spinner />
+) : items.length === 0 ? (
+  <Text secondary center>No items</Text>
+) : (
+  <List items={items} ... />
+)}
+```
+
+### Platform-Specific
+```tsx
+const { platform } = useTheme()
+const isIOS = platform === 'ios'
+
+// Or use platformSelect helper
+const borderRadius = platformSelect('14px', '8px')
+```
+
+### Status Display
+```tsx
+<StatusBadge status={order.status} />
+// Automatically maps: pending, confirmed, preparing, ready, delivering, delivered, cancelled
+```
+
+## Don'ts
+
+- Don't use `any` type - always define proper types
+- Don't use inline colors - use `colors` from theme
+- Don't create new CSS files - use Tailwind + inline styles
+- Don't use `useEffect` for derived state - use `useMemo`
+- Don't mutate state directly - use store actions
+- Don't hardcode strings - support i18n via `useLocale()`
+
+## Building
+
+```bash
+npm run build      # Build library
+npm run dev        # Watch mode
+npm run typecheck  # Type checking
+```

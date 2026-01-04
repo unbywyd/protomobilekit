@@ -1,0 +1,79 @@
+{
+  "name": "protomobilekit",
+  "version": "1.0.0",
+  "description": "React component library for rapid mobile app prototyping with iOS/Android styles",
+  "author": "unbywyd",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/unbywyd/protomobilekit.git"
+  },
+  "homepage": "https://github.com/unbywyd/protomobilekit#readme",
+  "bugs": {
+    "url": "https://github.com/unbywyd/protomobilekit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "zustand": "^4.5.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^8.4.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
+    "dayjs": "^1.11.10"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "react",
+    "mobile",
+    "ui",
+    "components",
+    "prototyping",
+    "ios",
+    "android",
+    "multi-app",
+    "navigation",
+    "authentication",
+    "state-management",
+    "typescript",
+    "tailwindcss",
+    "flowcraft",
+    "protomobilekit"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
