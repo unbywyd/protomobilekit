@@ -15,12 +15,12 @@ export { Text, Title, Subtitle, Caption, Label, type TextProps } from './Text'
 
 // Layout
 export { Screen, ScrollView, Section, Content, type ScreenProps, type ScrollViewProps, type SectionProps, type ContentProps } from './Screen'
-export { Header, BackButton, IconButton, type HeaderProps, type BackButtonProps, type IconButtonProps } from './Header'
+export { Header, BackButton, type HeaderProps, type BackButtonProps } from './Header'
 export { Card, type CardProps } from './Card'
 export { Divider, Spacer, type DividerProps, type SpacerProps } from './Divider'
 
 // Interactive
-export { Button, TextButton, type ButtonProps, type TextButtonProps } from './Button'
+export { Button, TextButton, IconButton, type ButtonProps, type TextButtonProps, type IconButtonProps } from './Button'
 export { Input, Select, type InputProps, type SelectProps, type SelectOption } from './Input'
 export { TextArea, type TextAreaProps } from './TextArea'
 export { Switch, type SwitchProps } from './Switch'

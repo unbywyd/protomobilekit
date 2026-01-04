@@ -21,7 +21,7 @@ export interface StoreState {
 
 export interface StoreActions {
   // Entity operations
-  create: <T extends Entity>(collection: string, data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>) => T
+  create: <T extends Entity>(collection: string, data: Omit<T, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }, options?: { silent?: boolean }) => T
   update: <T extends Entity>(collection: string, id: string, data: Partial<T>) => T | null
   delete: (collection: string, id: string) => boolean
 

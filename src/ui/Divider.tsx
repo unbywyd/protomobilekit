@@ -78,8 +78,16 @@ Divider.displayName = 'Divider'
 
 // Spacer for flex layouts
 export interface SpacerProps {
-  size?: number | 'flex'
+  size?: number | 'flex' | 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   className?: string
+}
+
+const spacerSizes = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
 }
 
 export function Spacer({ size = 'flex', className }: SpacerProps) {
@@ -87,7 +95,9 @@ export function Spacer({ size = 'flex', className }: SpacerProps) {
     return <div className={cn('flex-1', className)} />
   }
 
-  return <div className={className} style={{ height: size, width: size }} />
+  const pxSize = typeof size === 'string' ? spacerSizes[size as keyof typeof spacerSizes] : size
+
+  return <div className={className} style={{ height: pxSize, width: pxSize }} />
 }
 
 Spacer.displayName = 'Spacer'

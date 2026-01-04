@@ -3,8 +3,8 @@ import { cn } from './utils'
 import { useTheme } from './theme'
 
 export interface ProgressBarProps {
-  /** Progress value (0-100) */
-  value: number
+  /** Progress value (0-100). Optional when indeterminate is true. */
+  value?: number
   /** Show value label */
   showValue?: boolean
   /** Bar height */
@@ -27,7 +27,7 @@ export function ProgressBar({
   const { platform, colors } = useTheme()
   const isIOS = platform === 'ios'
 
-  const clampedValue = Math.max(0, Math.min(100, value))
+  const clampedValue = Math.max(0, Math.min(100, value ?? 0))
 
   const getColor = () => {
     switch (variant) {
@@ -105,8 +105,8 @@ ProgressBar.displayName = 'ProgressBar'
 
 // Circular progress
 export interface CircularProgressProps {
-  /** Progress value (0-100) */
-  value: number
+  /** Progress value (0-100). Optional when indeterminate is true. */
+  value?: number
   /** Size in pixels */
   size?: number
   /** Stroke width */
@@ -131,7 +131,7 @@ export function CircularProgress({
 }: CircularProgressProps) {
   const { colors } = useTheme()
 
-  const clampedValue = Math.max(0, Math.min(100, value))
+  const clampedValue = Math.max(0, Math.min(100, value ?? 0))
 
   const getColor = () => {
     switch (variant) {

@@ -150,7 +150,7 @@ Button.displayName = 'Button'
 // Text button for iOS style
 export interface TextButtonProps {
   children: React.ReactNode
-  onPress: () => void
+  onPress?: () => void
   color?: 'primary' | 'danger' | 'secondary'
   disabled?: boolean
   className?: string

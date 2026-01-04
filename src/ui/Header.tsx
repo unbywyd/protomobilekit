@@ -175,14 +175,14 @@ export function BackButton({ onPress, label }: BackButtonProps) {
 
 BackButton.displayName = 'BackButton'
 
-// Icon button helper for header actions
-export interface IconButtonProps {
+// Icon button helper for header actions (internal use)
+export interface HeaderIconButtonProps {
   icon: React.ReactNode
   onPress: () => void
   badge?: number | string
 }
 
-export function IconButton({ icon, onPress, badge }: IconButtonProps) {
+export function HeaderIconButton({ icon, onPress, badge }: HeaderIconButtonProps) {
   const { platform, colors } = useTheme()
   const isIOS = platform === 'ios'
 
@@ -208,4 +208,4 @@ export function IconButton({ icon, onPress, badge }: IconButtonProps) {
   )
 }
 
-IconButton.displayName = 'IconButton'
+HeaderIconButton.displayName = 'HeaderIconButton'
