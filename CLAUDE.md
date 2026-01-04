@@ -4,7 +4,7 @@ This file provides context for Claude Code when working on the ProtoMobileKit pr
 
 ## Project Overview
 
-ProtoMobileKit is a React component library for rapid mobile app prototyping. Part of the FlowCraft ecosystem. It provides:
+ProtoMobileKit is a React component library for rapid mobile app prototyping. It provides:
 
 - 50+ UI components styled for iOS and Android
 - Stack and tab navigation

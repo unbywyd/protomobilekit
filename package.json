@@ -67,7 +67,6 @@
     "state-management",
     "typescript",
     "tailwindcss",
-    "flowcraft",
     "protomobilekit"
   ],
   "engines": {

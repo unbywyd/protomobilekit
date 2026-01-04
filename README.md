@@ -1,6 +1,6 @@
 # ProtoMobileKit
 
-A React component library for rapid mobile app prototyping. Build iOS and Android-style interfaces with a unified API, complete with navigation, authentication, state management, and 50+ UI components. Part of the [FlowCraft](https://flowcraft.io) ecosystem.
+A React component library for rapid mobile app prototyping. Build iOS and Android-style interfaces with a unified API, complete with navigation, authentication, state management, and 50+ UI components.
 
 ## Features
 
