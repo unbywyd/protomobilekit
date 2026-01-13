@@ -12,6 +12,12 @@ export interface DatePickerProps {
   minDate?: Date
   maxDate?: Date
   title?: string
+  /** Text direction for RTL support */
+  dir?: 'ltr' | 'rtl'
+  /** Custom cancel button text */
+  cancelText?: string
+  /** Custom done button text */
+  doneText?: string
 }
 
 export function DatePicker({
@@ -22,10 +28,14 @@ export function DatePicker({
   minDate,
   maxDate,
   title,
+  dir,
+  cancelText,
+  doneText,
 }: DatePickerProps) {
   const { platform, colors } = useTheme()
   const isIOS = platform === 'ios'
   const locale = useLocale()
+  const isRTL = dir === 'rtl'
 
   const months = locale.months
   const monthsShort = locale.monthsShort
@@ -109,9 +119,22 @@ export function DatePicker({
     setViewDate(new Date(year, month + 1, 1))
   }
 
+  // Prev/Next icons - swap in RTL
+  const PrevIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path d={isRTL ? "M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" : "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"} />
+    </svg>
+  )
+
+  const NextIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path d={isRTL ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" : "M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"} />
+    </svg>
+  )
+
   return (
-    <BottomSheet open={open} onClose={onClose} showHandle={!isIOS} height="auto">
-      <div className="pb-4">
+    <BottomSheet open={open} onClose={onClose} showHandle={!isIOS} height="auto" cancelText={cancelText}>
+      <div className="pb-4" dir={dir}>
         {/* Header */}
         <div
           className="flex items-center justify-between px-4 py-3"
@@ -124,7 +147,7 @@ export function DatePicker({
                 className="text-base"
                 style={{ color: colors.primary }}
               >
-                {locale.cancel}
+                {cancelText || locale.cancel}
               </button>
               <span className="text-base font-semibold" style={{ color: colors.text }}>
                 {title || locale.selectDate}
@@ -134,7 +157,7 @@ export function DatePicker({
                 className="text-base font-semibold"
                 style={{ color: colors.primary }}
               >
-                {locale.done}
+                {doneText || locale.done}
               </button>
             </>
           ) : (
@@ -147,7 +170,7 @@ export function DatePicker({
                 className="px-4 py-2 text-sm font-medium rounded-full"
                 style={{ color: colors.primary }}
               >
-                {locale.ok}
+                {doneText || locale.ok}
               </button>
             </>
           )}
@@ -160,9 +183,7 @@ export function DatePicker({
             className="p-2 rounded-full"
             style={{ color: colors.text }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-            </svg>
+            <PrevIcon />
           </button>
           <span className="text-base font-semibold" style={{ color: colors.text }}>
             {months[month] || ''} {year}
@@ -172,9 +193,7 @@ export function DatePicker({
             className="p-2 rounded-full"
             style={{ color: colors.text }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
-            </svg>
+            <NextIcon />
           </button>
         </div>
 
@@ -256,6 +275,8 @@ export interface CalendarProps {
   onChange: (date: Date) => void
   minDate?: Date
   maxDate?: Date
+  /** Text direction for RTL support */
+  dir?: 'ltr' | 'rtl'
   className?: string
 }
 
@@ -264,10 +285,12 @@ export function Calendar({
   onChange,
   minDate,
   maxDate,
+  dir,
   className,
 }: CalendarProps) {
   const { colors } = useTheme()
   const locale = useLocale()
+  const isRTL = dir === 'rtl'
 
   const months = locale.months
   const weekdays = locale.weekdaysShort
@@ -318,8 +341,21 @@ export function Calendar({
     )
   }
 
+  // Prev/Next icons - swap in RTL
+  const PrevIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d={isRTL ? "M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" : "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"} />
+    </svg>
+  )
+
+  const NextIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d={isRTL ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" : "M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"} />
+    </svg>
+  )
+
   return (
-    <div className={cn('p-2', className)} style={{ backgroundColor: colors.surface }}>
+    <div className={cn('p-2', className)} style={{ backgroundColor: colors.surface }} dir={dir}>
       {/* Navigation */}
       <div className="flex items-center justify-between mb-2">
         <button
@@ -327,9 +363,7 @@ export function Calendar({
           className="p-2"
           style={{ color: colors.text }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-          </svg>
+          <PrevIcon />
         </button>
         <span className="text-sm font-semibold" style={{ color: colors.text }}>
           {months[month] || ''} {year}
@@ -339,9 +373,7 @@ export function Calendar({
           className="p-2"
           style={{ color: colors.text }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
-          </svg>
+          <NextIcon />
         </button>
       </div>
 
