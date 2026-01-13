@@ -46,6 +46,8 @@ export interface AutocompleteProps<T extends Entity = Entity> {
   searchPlaceholder?: string
   /** Empty state text */
   emptyText?: string
+  /** Done button text (for multiple selection) */
+  doneText?: string
   /** Maximum results to show */
   maxResults?: number
   /** Custom render for selected value */
@@ -69,6 +71,7 @@ export function Autocomplete<T extends Entity = Entity>({
   filter,
   searchPlaceholder,
   emptyText,
+  doneText,
   maxResults = 50,
   renderValue,
   className,
@@ -402,7 +405,7 @@ export function Autocomplete<T extends Entity = Entity>({
                   color: colors.primaryText,
                 }}
               >
-                {locale.done} ({selectedValues.length})
+                {doneText || locale.done} ({selectedValues.length})
               </button>
             </div>
           )}

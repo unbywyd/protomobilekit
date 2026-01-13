@@ -14,6 +14,12 @@ export interface TimePickerProps {
   /** Minute step (1, 5, 10, 15, 30) */
   minuteStep?: number
   title?: string
+  /** Text direction for RTL support */
+  dir?: 'ltr' | 'rtl'
+  /** Custom cancel button text */
+  cancelText?: string
+  /** Custom done button text */
+  doneText?: string
 }
 
 // Wheel picker component
@@ -116,6 +122,9 @@ export function TimePicker({
   format = '12',
   minuteStep = 1,
   title,
+  dir,
+  cancelText,
+  doneText,
 }: TimePickerProps) {
   const { platform, colors } = useTheme()
   const isIOS = platform === 'ios'
@@ -161,8 +170,8 @@ export function TimePicker({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} showHandle={!isIOS} height="auto">
-      <div className="pb-4">
+    <BottomSheet open={open} onClose={onClose} showHandle={!isIOS} height="auto" cancelText={cancelText}>
+      <div className="pb-4" dir={dir}>
         {/* Header */}
         <div
           className="flex items-center justify-between px-4 py-3"
@@ -175,7 +184,7 @@ export function TimePicker({
                 className="text-base"
                 style={{ color: colors.primary }}
               >
-                {locale.cancel}
+                {cancelText || locale.cancel}
               </button>
               <span className="text-base font-semibold" style={{ color: colors.text }}>
                 {title || locale.selectTime}
@@ -185,7 +194,7 @@ export function TimePicker({
                 className="text-base font-semibold"
                 style={{ color: colors.primary }}
               >
-                {locale.done}
+                {doneText || locale.done}
               </button>
             </>
           ) : (
@@ -198,7 +207,7 @@ export function TimePicker({
                 className="px-4 py-2 text-sm font-medium rounded-full"
                 style={{ color: colors.primary }}
               >
-                {locale.ok}
+                {doneText || locale.ok}
               </button>
             </>
           )}
@@ -294,6 +303,12 @@ export interface DateTimePickerProps {
   maxDate?: Date
   format?: '12' | '24'
   title?: string
+  /** Text direction for RTL support */
+  dir?: 'ltr' | 'rtl'
+  /** Custom cancel button text */
+  cancelText?: string
+  /** Custom done button text */
+  doneText?: string
 }
 
 export function DateTimePicker({
@@ -305,10 +320,14 @@ export function DateTimePicker({
   maxDate,
   format = '24',
   title,
+  dir,
+  cancelText,
+  doneText,
 }: DateTimePickerProps) {
   const { platform, colors } = useTheme()
   const isIOS = platform === 'ios'
   const locale = useLocale()
+  const isRTL = dir === 'rtl'
 
   const [mode, setMode] = useState<'date' | 'time'>('date')
   const [selectedDate, setSelectedDate] = useState<Date>(value || new Date())
@@ -357,7 +376,7 @@ export function DateTimePicker({
         <div className="flex items-center justify-between mb-4">
           <button onClick={prevMonth} className="p-2" style={{ color: colors.primary }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+              <path d={isRTL ? "M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" : "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"} />
             </svg>
           </button>
           <span className="font-semibold" style={{ color: colors.text }}>
@@ -365,7 +384,7 @@ export function DateTimePicker({
           </span>
           <button onClick={nextMonth} className="p-2" style={{ color: colors.primary }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
+              <path d={isRTL ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" : "M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"} />
             </svg>
           </button>
         </div>
@@ -412,8 +431,8 @@ export function DateTimePicker({
   const minuteItems = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
   return (
-    <BottomSheet open={open} onClose={onClose} showHandle={!isIOS} height={480}>
-      <div className="flex flex-col h-full">
+    <BottomSheet open={open} onClose={onClose} showHandle={!isIOS} height={480} cancelText={cancelText}>
+      <div className="flex flex-col h-full" dir={dir}>
         {/* Header */}
         <div
           className="flex items-center justify-between px-4 py-3 shrink-0"
@@ -422,7 +441,7 @@ export function DateTimePicker({
           {isIOS ? (
             <>
               <button onClick={onClose} style={{ color: colors.primary }}>
-                {locale.cancel}
+                {cancelText || locale.cancel}
               </button>
               <span className="font-semibold" style={{ color: colors.text }}>
                 {title || locale.selectDateTime}
@@ -432,7 +451,7 @@ export function DateTimePicker({
                 className="font-semibold"
                 style={{ color: colors.primary }}
               >
-                {locale.done}
+                {doneText || locale.done}
               </button>
             </>
           ) : (
@@ -445,7 +464,7 @@ export function DateTimePicker({
                 className="text-sm font-medium"
                 style={{ color: colors.primary }}
               >
-                {locale.ok}
+                {doneText || locale.ok}
               </button>
             </>
           )}

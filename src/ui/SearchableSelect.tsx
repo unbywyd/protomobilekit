@@ -31,6 +31,8 @@ export interface SearchableSelectProps {
   renderValue?: (selected: SearchableSelectOption | SearchableSelectOption[]) => React.ReactNode
   /** Empty state text */
   emptyText?: string
+  /** Done button text (for multiple selection) */
+  doneText?: string
   className?: string
 }
 
@@ -47,6 +49,7 @@ export function SearchableSelect({
   searchPlaceholder,
   renderValue,
   emptyText,
+  doneText,
   className,
 }: SearchableSelectProps) {
   const { platform, colors } = useTheme()
@@ -278,7 +281,7 @@ export function SearchableSelect({
                   color: '#FFFFFF',
                 }}
               >
-                {locale.done} ({selectedValues.length})
+                {doneText || locale.done} ({selectedValues.length})
               </button>
             </div>
           )}
