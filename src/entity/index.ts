@@ -6,9 +6,14 @@ export { generateFakeValue, generateFakeData, generateFakeRecords } from './fake
 
 // Types
 export type {
+  PrimitiveFieldType,
   FieldType,
   FieldDefinition,
   FieldsDefinition,
+  ArrayFieldDefinition,
+  EnumFieldDefinition,
+  RelationFieldDefinition,
+  BaseFieldDefinition,
   EntityDefinition,
   InferEntity,
   InferEntityFromFields,

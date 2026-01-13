@@ -1,13 +1,8 @@
 import { faker } from '@faker-js/faker'
-import type { FieldType, FieldDefinition, FieldsDefinition, EnumFieldDefinition } from './types'
+import type { FieldType, FieldDefinition, FieldsDefinition, PrimitiveFieldType, ArrayFieldDefinition } from './types'
 
-// Generate fake value for a field type
-export function generateFakeValue(type: FieldType, definition?: FieldDefinition): unknown {
-  // If custom faker path is provided
-  if (definition && 'faker' in definition && definition.faker) {
-    return getFakerValue(definition.faker)
-  }
-
+// Generate fake value for a primitive field type
+function generatePrimitiveValue(type: PrimitiveFieldType): unknown {
   switch (type) {
     case 'string':
       return faker.lorem.words(3)
@@ -27,6 +22,29 @@ export function generateFakeValue(type: FieldType, definition?: FieldDefinition)
       return faker.image.url()
     case 'uuid':
       return faker.string.uuid()
+    default:
+      return null
+  }
+}
+
+// Generate fake value for a field type
+export function generateFakeValue(type: FieldType, definition?: FieldDefinition): unknown {
+  // If custom faker path is provided
+  if (definition && 'faker' in definition && definition.faker) {
+    return getFakerValue(definition.faker)
+  }
+
+  switch (type) {
+    case 'string':
+    case 'number':
+    case 'boolean':
+    case 'date':
+    case 'email':
+    case 'phone':
+    case 'url':
+    case 'image':
+    case 'uuid':
+      return generatePrimitiveValue(type)
     case 'enum':
       if (definition && 'values' in definition && definition.values.length > 0) {
         return faker.helpers.arrayElement(definition.values as readonly string[])
@@ -35,6 +53,15 @@ export function generateFakeValue(type: FieldType, definition?: FieldDefinition)
     case 'relation':
       // Relations should be set explicitly
       return null
+    case 'array':
+      if (definition && 'items' in definition) {
+        const arrayDef = definition as ArrayFieldDefinition
+        const minItems = arrayDef.minItems ?? 1
+        const maxItems = arrayDef.maxItems ?? 5
+        const count = faker.number.int({ min: minItems, max: maxItems })
+        return Array.from({ length: count }, () => generatePrimitiveValue(arrayDef.items))
+      }
+      return []
     default:
       return null
   }
