@@ -17,6 +17,8 @@ export interface BottomSheetProps {
   height?: 'auto' | 'half' | 'full' | number
   /** Close on backdrop click */
   closeOnBackdrop?: boolean
+  /** Cancel button text (iOS only, shown when title is set) */
+  cancelText?: string
   className?: string
 }
 
@@ -28,9 +30,11 @@ export function BottomSheet({
   showHandle = true,
   height = 'auto',
   closeOnBackdrop = true,
+  cancelText,
   className,
 }: BottomSheetProps) {
   const { platform, colors } = useTheme()
+  const locale = useLocale()
   const sheetRef = useRef<HTMLDivElement>(null)
   const canvasRoot = useCanvasRoot()
 
@@ -137,7 +141,7 @@ export function BottomSheet({
                   className="absolute left-4 text-base"
                   style={{ color: colors.primary }}
                 >
-                  Cancel
+                  {cancelText || locale.cancel}
                 </button>
                 <h2
                   className="text-base font-semibold"
