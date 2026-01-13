@@ -130,7 +130,18 @@ export function Onboarding({
         {(currentSlide.image || currentSlide.imageUrl) && (
           <div className="mb-8 w-full max-w-xs aspect-square flex items-center justify-center">
             {currentSlide.image ? (
-              currentSlide.image
+              // Check if image is a URL string
+              typeof currentSlide.image === 'string' &&
+              (currentSlide.image.startsWith('http') || currentSlide.image.startsWith('/')) ? (
+                <img
+                  src={currentSlide.image}
+                  alt={currentSlide.title}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                // Render as React node (emoji, icon, or component)
+                currentSlide.image
+              )
             ) : currentSlide.imageUrl ? (
               <img
                 src={currentSlide.imageUrl}

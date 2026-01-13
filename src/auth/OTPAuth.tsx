@@ -1,15 +1,24 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { cn } from '../ui/utils'
 import { useTheme } from '../ui/theme'
 import { Screen } from '../ui/Screen'
 import { Header, BackButton } from '../ui/Header'
 import { Button } from '../ui/Button'
 import { Text } from '../ui/Text'
+import { BottomSheet } from '../ui/BottomSheet'
 import { PhoneInput } from '../forms/inputs/PhoneInput'
 import { OTPInput } from '../forms/inputs/OTPInput'
 import { useAuth } from './hooks'
 import { getAllAppUsers } from './registry'
 import type { AuthUser } from './types'
+
+const LOREM_IPSUM = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.`
 
 /**
  * Find a test user by phone number across all apps
@@ -69,6 +78,22 @@ export interface OTPAuthProps {
   showRoleSelector?: boolean
   /** Available roles for selector */
   roles?: Array<{ value: string; label: string }>
+  /** Show Terms of Use / Privacy Policy links */
+  showLegalLinks?: boolean
+  /** Terms of Use title */
+  termsTitle?: string
+  /** Privacy Policy title */
+  privacyTitle?: string
+  /** Terms of Use content (defaults to Lorem Ipsum) */
+  termsContent?: React.ReactNode
+  /** Privacy Policy content (defaults to Lorem Ipsum) */
+  privacyContent?: React.ReactNode
+  /** "Wrong number?" link text */
+  wrongNumberText?: string
+  /** "Resend code" link text */
+  resendText?: string
+  /** Resend cooldown in seconds */
+  resendCooldown?: number
   className?: string
 }
 
@@ -124,6 +149,14 @@ export function OTPAuth({
     { value: 'courier', label: 'Courier' },
     { value: 'admin', label: 'Admin' },
   ],
+  showLegalLinks = true,
+  termsTitle = 'Terms of Use',
+  privacyTitle = 'Privacy Policy',
+  termsContent,
+  privacyContent,
+  wrongNumberText = 'Wrong number?',
+  resendText = 'Resend code',
+  resendCooldown = 60,
   className,
 }: OTPAuthProps) {
   const { colors, platform } = useTheme()
@@ -137,6 +170,21 @@ export function OTPAuth({
   const [selectedRole, setSelectedRole] = useState(defaultRole)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Legal sheets state
+  const [termsOpen, setTermsOpen] = useState(false)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
+
+  // Resend cooldown state
+  const [resendTimer, setResendTimer] = useState(0)
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendTimer])
 
   // Phone step
   const handlePhoneSubmit = useCallback(async () => {
@@ -162,12 +210,13 @@ export function OTPAuth({
         await onSendOTP(phone)
       }
       setStep('code')
+      setResendTimer(resendCooldown)
     } catch (e) {
       setError('Failed to send code')
     } finally {
       setLoading(false)
     }
-  }, [phone, validatePhone, onSendOTP])
+  }, [phone, validatePhone, onSendOTP, resendCooldown])
 
   // OTP step
   const handleCodeSubmit = useCallback(async () => {
@@ -290,6 +339,32 @@ export function OTPAuth({
               >
                 {loading ? 'Sending...' : 'Continue'}
               </Button>
+
+              {/* Legal links */}
+              {showLegalLinks && (
+                <div className="flex justify-center gap-1 mt-4 flex-wrap">
+                  <Text size="xs" secondary>
+                    By continuing, you agree to our
+                  </Text>
+                  <button
+                    onClick={() => setTermsOpen(true)}
+                    className="text-xs"
+                    style={{ color: colors.primary }}
+                  >
+                    {termsTitle}
+                  </button>
+                  <Text size="xs" secondary>
+                    and
+                  </Text>
+                  <button
+                    onClick={() => setPrivacyOpen(true)}
+                    className="text-xs"
+                    style={{ color: colors.primary }}
+                  >
+                    {privacyTitle}
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -321,16 +396,36 @@ export function OTPAuth({
               </Text>
             )}
 
-            <button
-              onClick={() => {
-                setCode('')
-                onSendOTP?.(phone)
-              }}
-              className="text-center py-2"
-              style={{ color: colors.primary }}
-            >
-              <Text primary size="sm">Resend code</Text>
-            </button>
+            {/* Wrong number + Resend links */}
+            <div className="flex justify-center gap-4 mt-2">
+              <button
+                onClick={() => {
+                  setStep('phone')
+                  setCode('')
+                  setError(null)
+                }}
+                className="text-sm py-2"
+                style={{ color: colors.primary }}
+              >
+                {wrongNumberText}
+              </button>
+              <button
+                onClick={() => {
+                  if (resendTimer === 0) {
+                    setCode('')
+                    setResendTimer(resendCooldown)
+                    onSendOTP?.(phone)
+                  }
+                }}
+                className="text-sm py-2"
+                style={{
+                  color: resendTimer > 0 ? colors.textSecondary : colors.primary,
+                }}
+                disabled={resendTimer > 0}
+              >
+                {resendTimer > 0 ? `${resendText} (${resendTimer}s)` : resendText}
+              </button>
+            </div>
 
             <div className="mt-auto pb-safe-bottom pb-6">
               <Button
@@ -449,6 +544,34 @@ export function OTPAuth({
           </>
         )}
       </div>
+
+      {/* Terms of Use BottomSheet */}
+      <BottomSheet
+        open={termsOpen}
+        onClose={() => setTermsOpen(false)}
+        title={termsTitle}
+        height="half"
+      >
+        <div className="p-4">
+          <Text secondary style={{ lineHeight: 1.6 }}>
+            {termsContent || LOREM_IPSUM}
+          </Text>
+        </div>
+      </BottomSheet>
+
+      {/* Privacy Policy BottomSheet */}
+      <BottomSheet
+        open={privacyOpen}
+        onClose={() => setPrivacyOpen(false)}
+        title={privacyTitle}
+        height="half"
+      >
+        <div className="p-4">
+          <Text secondary style={{ lineHeight: 1.6 }}>
+            {privacyContent || LOREM_IPSUM}
+          </Text>
+        </div>
+      </BottomSheet>
     </Screen>
   )
 }
