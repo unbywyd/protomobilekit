@@ -94,6 +94,55 @@ export interface OTPAuthProps {
   resendText?: string
   /** Resend cooldown in seconds */
   resendCooldown?: number
+  /** Text direction (ltr/rtl) */
+  dir?: 'ltr' | 'rtl'
+  /** i18n texts */
+  texts?: {
+    /** Phone step title */
+    phoneTitle?: string
+    /** Phone step subtitle */
+    phoneSubtitle?: string
+    /** Continue button */
+    continueButton?: string
+    /** Sending... button state */
+    sendingButton?: string
+    /** Legal text prefix */
+    legalPrefix?: string
+    /** Legal text "and" */
+    legalAnd?: string
+    /** Code step title */
+    codeTitle?: string
+    /** Code step subtitle (use {phone} as placeholder) */
+    codeSubtitle?: string
+    /** Verify button */
+    verifyButton?: string
+    /** Verifying... button state */
+    verifyingButton?: string
+    /** Profile step title */
+    profileTitle?: string
+    /** Profile step subtitle */
+    profileSubtitle?: string
+    /** Name label */
+    nameLabel?: string
+    /** Name placeholder */
+    namePlaceholder?: string
+    /** Role label */
+    roleLabel?: string
+    /** Complete button */
+    completeButton?: string
+    /** Error: invalid phone */
+    errorInvalidPhone?: string
+    /** Error: invalid code */
+    errorInvalidCode?: string
+    /** Error: enter name */
+    errorEnterName?: string
+    /** Error: failed to send */
+    errorFailedToSend?: string
+    /** Error: verification failed */
+    errorVerificationFailed?: string
+    /** BottomSheet cancel button */
+    cancelButton?: string
+  }
   className?: string
 }
 
@@ -157,11 +206,42 @@ export function OTPAuth({
   wrongNumberText = 'Wrong number?',
   resendText = 'Resend code',
   resendCooldown = 60,
+  dir,
+  texts = {},
   className,
 }: OTPAuthProps) {
   const { colors, platform } = useTheme()
   const isIOS = platform === 'ios'
   const { login } = useAuth({ namespace })
+
+  // Merge texts with defaults
+  const t = {
+    phoneTitle: texts.phoneTitle || 'Enter your phone',
+    phoneSubtitle: texts.phoneSubtitle || "We'll send you a verification code",
+    continueButton: texts.continueButton || 'Continue',
+    sendingButton: texts.sendingButton || 'Sending...',
+    legalPrefix: texts.legalPrefix || 'By continuing, you agree to our',
+    legalAnd: texts.legalAnd || 'and',
+    codeTitle: texts.codeTitle || 'Enter code',
+    codeSubtitle: texts.codeSubtitle || 'Sent to {phone}',
+    verifyButton: texts.verifyButton || 'Verify',
+    verifyingButton: texts.verifyingButton || 'Verifying...',
+    profileTitle: texts.profileTitle || 'Complete profile',
+    profileSubtitle: texts.profileSubtitle || 'Tell us about yourself',
+    nameLabel: texts.nameLabel || 'Your name',
+    namePlaceholder: texts.namePlaceholder || 'John Doe',
+    roleLabel: texts.roleLabel || 'I am a',
+    completeButton: texts.completeButton || 'Complete',
+    errorInvalidPhone: texts.errorInvalidPhone || 'Enter a valid phone number',
+    errorInvalidCode: texts.errorInvalidCode || `Enter ${otpLength}-digit code`,
+    errorEnterName: texts.errorEnterName || 'Enter your name',
+    errorFailedToSend: texts.errorFailedToSend || 'Failed to send code',
+    errorVerificationFailed: texts.errorVerificationFailed || 'Verification failed',
+    cancelButton: texts.cancelButton || undefined,
+  }
+
+  // RTL support
+  const isRTL = dir === 'rtl'
 
   const [step, setStep] = useState<OTPAuthStep>('phone')
   const [phone, setPhone] = useState('')
@@ -192,14 +272,14 @@ export function OTPAuth({
 
     // Validate phone
     if (!phone || phone.length < 10) {
-      setError('Enter a valid phone number')
+      setError(t.errorInvalidPhone)
       return
     }
 
     if (validatePhone) {
       const result = validatePhone(phone)
       if (result !== true) {
-        setError(typeof result === 'string' ? result : 'Invalid phone number')
+        setError(typeof result === 'string' ? result : t.errorInvalidPhone)
         return
       }
     }
@@ -212,7 +292,7 @@ export function OTPAuth({
       setStep('code')
       setResendTimer(resendCooldown)
     } catch (e) {
-      setError('Failed to send code')
+      setError(t.errorFailedToSend)
     } finally {
       setLoading(false)
     }
@@ -223,7 +303,7 @@ export function OTPAuth({
     setError(null)
 
     if (code.length !== otpLength) {
-      setError(`Enter ${otpLength}-digit code`)
+      setError(t.errorInvalidCode)
       return
     }
 
@@ -235,7 +315,7 @@ export function OTPAuth({
         : code.length === otpLength
 
       if (!isValid) {
-        setError('Invalid code')
+        setError(t.errorInvalidCode)
         setLoading(false)
         return
       }
@@ -260,18 +340,18 @@ export function OTPAuth({
         setStep('profile')
       }
     } catch (e) {
-      setError('Verification failed')
+      setError(t.errorVerificationFailed)
     } finally {
       setLoading(false)
     }
-  }, [code, otpLength, validateOTP, phone, skipProfile, selectedRole, login, onSuccess])
+  }, [code, otpLength, validateOTP, phone, skipProfile, selectedRole, login, onSuccess, t.errorInvalidCode, t.errorVerificationFailed])
 
   // Profile step
   const handleProfileSubmit = useCallback(() => {
     setError(null)
 
     if (!name.trim()) {
-      setError('Enter your name')
+      setError(t.errorEnterName)
       return
     }
 
@@ -284,7 +364,7 @@ export function OTPAuth({
 
     login(user)
     onSuccess(user)
-  }, [name, phone, selectedRole, login, onSuccess])
+  }, [name, phone, selectedRole, login, onSuccess, t.errorEnterName])
 
   // Go back
   const handleBack = useCallback(() => {
@@ -311,24 +391,27 @@ export function OTPAuth({
       }
       className={className}
     >
-      <div className="flex-1 flex flex-col px-6 pt-8">
+      <div className="flex-1 flex flex-col px-6 pt-8" dir={dir}>
         {/* Phone Step */}
         {step === 'phone' && (
           <>
             <Text size="xl" bold className="mb-2">
-              Enter your phone
+              {t.phoneTitle}
             </Text>
             <Text secondary className="mb-6">
-              We'll send you a verification code
+              {t.phoneSubtitle}
             </Text>
 
-            <PhoneInput
-              value={phone}
-              onChange={setPhone}
-              defaultCountry={countryCode}
-              error={error}
-              autoFocus
-            />
+            {/* Phone input - always LTR */}
+            <div dir="ltr">
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+                defaultCountry={countryCode}
+                error={error}
+                autoFocus
+              />
+            </div>
 
             <div className="mt-auto pb-safe-bottom pb-6">
               <Button
@@ -337,14 +420,14 @@ export function OTPAuth({
                 onClick={handlePhoneSubmit}
                 disabled={loading || !phone}
               >
-                {loading ? 'Sending...' : 'Continue'}
+                {loading ? t.sendingButton : t.continueButton}
               </Button>
 
               {/* Legal links */}
               {showLegalLinks && (
                 <div className="flex justify-center gap-1 mt-4 flex-wrap">
                   <Text size="xs" secondary>
-                    By continuing, you agree to our
+                    {t.legalPrefix}
                   </Text>
                   <button
                     onClick={() => setTermsOpen(true)}
@@ -354,7 +437,7 @@ export function OTPAuth({
                     {termsTitle}
                   </button>
                   <Text size="xs" secondary>
-                    and
+                    {t.legalAnd}
                   </Text>
                   <button
                     onClick={() => setPrivacyOpen(true)}
@@ -373,13 +456,14 @@ export function OTPAuth({
         {step === 'code' && (
           <>
             <Text size="xl" bold className="mb-2">
-              Enter code
+              {t.codeTitle}
             </Text>
             <Text secondary className="mb-6">
-              Sent to {phone}
+              {t.codeSubtitle.replace('{phone}', phone)}
             </Text>
 
-            <div className="flex justify-center mb-4">
+            {/* OTP input - always LTR */}
+            <div className="flex justify-center mb-4" dir="ltr">
               <OTPInput
                 value={code}
                 onChange={setCode}
@@ -434,7 +518,7 @@ export function OTPAuth({
                 onClick={handleCodeSubmit}
                 disabled={loading || code.length !== otpLength}
               >
-                {loading ? 'Verifying...' : 'Verify'}
+                {loading ? t.verifyingButton : t.verifyButton}
               </Button>
             </div>
           </>
@@ -444,10 +528,10 @@ export function OTPAuth({
         {step === 'profile' && (
           <>
             <Text size="xl" bold className="mb-2">
-              Complete profile
+              {t.profileTitle}
             </Text>
             <Text secondary className="mb-6">
-              Tell us about yourself
+              {t.profileSubtitle}
             </Text>
 
             {/* Name input */}
@@ -459,19 +543,19 @@ export function OTPAuth({
                 )}
                 style={{ color: colors.textSecondary }}
               >
-                Your name
+                {t.nameLabel}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
+                placeholder={t.namePlaceholder}
                 autoFocus
                 className="w-full transition-colors focus:outline-none"
                 style={{
                   height: isIOS ? 44 : 48,
-                  paddingLeft: 14,
-                  paddingRight: 14,
+                  paddingInlineStart: 14,
+                  paddingInlineEnd: 14,
                   fontSize: 16,
                   backgroundColor: colors.surface,
                   borderWidth: 1,
@@ -498,7 +582,7 @@ export function OTPAuth({
                   )}
                   style={{ color: colors.textSecondary }}
                 >
-                  I am a
+                  {t.roleLabel}
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {roles.map((role) => (
@@ -538,7 +622,7 @@ export function OTPAuth({
                 onClick={handleProfileSubmit}
                 disabled={!name.trim()}
               >
-                Complete
+                {t.completeButton}
               </Button>
             </div>
           </>
@@ -550,9 +634,10 @@ export function OTPAuth({
         open={termsOpen}
         onClose={() => setTermsOpen(false)}
         title={termsTitle}
+        cancelText={t.cancelButton}
         height="half"
       >
-        <div className="p-4">
+        <div className="p-4" dir={dir}>
           <Text secondary style={{ lineHeight: 1.6 }}>
             {termsContent || LOREM_IPSUM}
           </Text>
@@ -564,9 +649,10 @@ export function OTPAuth({
         open={privacyOpen}
         onClose={() => setPrivacyOpen(false)}
         title={privacyTitle}
+        cancelText={t.cancelButton}
         height="half"
       >
-        <div className="p-4">
+        <div className="p-4" dir={dir}>
           <Text secondary style={{ lineHeight: 1.6 }}>
             {privacyContent || LOREM_IPSUM}
           </Text>
