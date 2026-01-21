@@ -66,9 +66,11 @@ export function Text({
   center,
   right,
   block,
-  as: Component = 'span',
+  as,
   style,
 }: TextProps) {
+  // Default to 'div' when block=true, otherwise 'span'
+  const Component = as ?? (block ? 'div' : 'span')
   const { colors } = useTheme()
 
   // Determine color (can be overridden by style.color)
@@ -145,6 +147,14 @@ export function Caption({ children, className, ...props }: Omit<TextProps, 'size
 export function Label({ children, className, ...props }: Omit<TextProps, 'as' | 'size'>) {
   return (
     <Text as="label" size="sm" medium className={className} {...props}>
+      {children}
+    </Text>
+  )
+}
+
+export function Paragraph({ children, className, ...props }: Omit<TextProps, 'as' | 'block'>) {
+  return (
+    <Text as="p" className={className} {...props}>
       {children}
     </Text>
   )

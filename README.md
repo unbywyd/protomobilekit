@@ -314,8 +314,86 @@ function App() {
   screenOptions={{        // Default options for all screens
     headerShown: true,
   }}
+  useHash={false}         // Enable hash-based URL routing
+  id="main"               // Navigator ID for screen registry
 >
 ```
+
+#### Hash-Based URL Routing
+
+Enable URL synchronization with `useHash` prop. Navigation state syncs to URL hash (e.g., `#/screen?param=value`).
+
+```tsx
+// Enable hash routing
+<Navigator initial="home" useHash>
+  <Navigator.Screen name="home" component={HomeScreen} />
+  <Navigator.Screen name="orders" component={OrdersScreen} />
+  <Navigator.Screen name="details" component={DetailsScreen} />
+</Navigator>
+
+// URLs:
+// #/home
+// #/orders
+// #/details?id=123
+```
+
+Benefits:
+- **Bookmarkable** - users can share/bookmark specific screens
+- **Browser navigation** - back/forward buttons work
+- **External access** - LLM bots and documentation tools can link to screens
+- **Deep linking** - open app at specific screen with params
+
+#### Screen Registry API
+
+Access registered screens programmatically for external routing, documentation, or tooling.
+
+```tsx
+import {
+  getScreens,
+  getScreenNames,
+  hasScreen,
+  subscribeToScreenRegistry,
+  parseHash,
+  buildHash,
+} from 'protomobilekit'
+
+// Get all registered screens
+const screens = getScreens()
+// [
+//   { name: 'home', navigatorId: 'main', navigatorType: 'stack', options: {...} },
+//   { name: 'orders', navigatorId: 'main', navigatorType: 'tabs', tab: { label: 'Orders', icon: ... } },
+// ]
+
+// Get screens for specific navigator
+const mainScreens = getScreens('main')
+
+// Get just screen names
+const names = getScreenNames()
+// ['home', 'orders', 'profile', 'details']
+
+// Check if screen exists
+if (hasScreen('orders')) {
+  // screen exists
+}
+
+// Subscribe to registry changes
+const unsubscribe = subscribeToScreenRegistry(() => {
+  console.log('Screens updated:', getScreens())
+})
+
+// Hash utilities for manual URL building
+parseHash('#/orders?id=123')
+// { screen: 'orders', params: { id: '123' } }
+
+buildHash('orders', { id: '123', tab: 'active' })
+// '#/orders?id=123&tab=active'
+```
+
+Use cases:
+- **Generate documentation** - list all screens automatically
+- **External navigation** - route to screens from outside React
+- **Testing** - verify screen registration
+- **LLM integration** - bots can discover available screens
 
 ---
 
@@ -1613,6 +1691,52 @@ import { Screen, Header, BackButton } from 'protomobilekit'
 ---
 
 ### Data Display
+
+#### Text
+
+Typography component. **Renders as `<span>` (inline) by default.**
+
+```tsx
+// Basic usage (inline by default)
+<Text>Inline text</Text>                    // → <span>...</span>
+<Text secondary>Secondary color</Text>
+<Text primary bold>Primary bold</Text>
+<Text danger>Error message</Text>
+
+// Sizes
+<Text size="xs">Extra small</Text>
+<Text size="sm">Small</Text>
+<Text size="md">Medium (default)</Text>
+<Text size="lg">Large</Text>
+<Text size="xl">Extra large</Text>
+<Text size="2xl">2X large</Text>
+
+// Weights
+<Text light>Light</Text>
+<Text medium>Medium</Text>
+<Text semibold>Semibold</Text>
+<Text bold>Bold</Text>
+
+// Block display (renders as <div> automatically)
+<Text block>Block-level text</Text>         // → <div>...</div>
+
+// Change HTML element with 'as' prop
+<Text as="p">Paragraph</Text>               // → <p>...</p>
+<Text as="h1" size="2xl" bold>Heading</Text> // → <h1>...</h1>
+<Text as="div">Div wrapper</Text>           // → <div>...</div>
+<Text as="label">Form label</Text>          // → <label>...</label>
+
+// Alignment
+<Text center>Centered</Text>
+<Text right>Right aligned</Text>
+
+// Shorthand components (pre-configured)
+<Title>Page Title</Title>        // h2, xl, bold
+<Subtitle>Section</Subtitle>     // h3, lg, semibold
+<Paragraph>Body text</Paragraph> // p, block element
+<Caption>Small note</Caption>    // xs, secondary
+<Label>Form Label</Label>        // label, sm, medium
+```
 
 #### List & ListItem
 

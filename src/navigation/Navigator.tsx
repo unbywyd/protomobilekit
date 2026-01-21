@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useRef,
   Children,
   isValidElement,
 } from 'react'
@@ -13,6 +14,12 @@ import { cn } from '../ui/utils'
 import { eventBus } from '../events/bus'
 import { useAppContext } from '../canvas/Canvas'
 import { registerNavigator, unregisterNavigator } from '../frames/registry'
+import {
+  registerScreen,
+  unregisterNavigatorScreens,
+  parseHash,
+  buildHash,
+} from './registry'
 import type {
   NavigatorProps,
   ScreenDefinition,
@@ -104,10 +111,13 @@ export function Navigator({
   tabBarPosition = 'bottom',
   tabBarHidden = false,
   tabBarStyle,
+  useHash = false,
+  id = 'main',
 }: NavigatorProps) {
   const { platform, colors } = useTheme()
   const isIOS = platform === 'ios'
   const isTabs = type === 'tabs'
+  const isUpdatingFromHash = useRef(false)
 
   // Extract screens from children
   const screens = useMemo(() => {
@@ -129,9 +139,38 @@ export function Navigator({
     return result
   }, [children, screenOptions])
 
+  // Register screens in global registry
+  useEffect(() => {
+    screens.forEach(screen => {
+      registerScreen(
+        screen.name,
+        id,
+        type,
+        screen.options,
+        screen.icon || screen.label ? {
+          label: screen.label,
+          icon: screen.icon,
+          activeIcon: screen.activeIcon,
+        } : undefined
+      )
+    })
+    return () => unregisterNavigatorScreens(id)
+  }, [screens, id, type])
+
+  // Get initial route from hash if enabled
+  const getInitialRoute = useCallback((): Route => {
+    if (useHash && typeof window !== 'undefined') {
+      const parsed = parseHash(window.location.hash)
+      if (parsed && screens.some(s => s.name === parsed.screen)) {
+        return { name: parsed.screen, params: parsed.params, key: `${parsed.screen}-${Date.now()}` }
+      }
+    }
+    return { name: initial, params: {}, key: `${initial}-${Date.now()}` }
+  }, [useHash, initial, screens])
+
   // Navigation state
   const [state, setState] = useState<NavigationState>(() => ({
-    routes: [{ name: initial, params: {}, key: `${initial}-${Date.now()}` }],
+    routes: [getInitialRoute()],
     index: 0,
   }))
 
@@ -191,6 +230,41 @@ export function Navigator({
   }, [initial])
 
   const canGoBack = useCallback(() => state.index > 0, [state.index])
+
+  // Sync hash with navigation state
+  useEffect(() => {
+    if (!useHash || typeof window === 'undefined') return
+
+    const currentRoute = state.routes[state.index]
+    if (!isUpdatingFromHash.current) {
+      const newHash = buildHash(currentRoute.name, currentRoute.params)
+      if (window.location.hash !== newHash) {
+        window.history.replaceState(null, '', newHash)
+      }
+    }
+    isUpdatingFromHash.current = false
+  }, [state, useHash])
+
+  // Listen to hashchange events
+  useEffect(() => {
+    if (!useHash || typeof window === 'undefined') return
+
+    const handleHashChange = () => {
+      const parsed = parseHash(window.location.hash)
+      if (parsed && screens.some(s => s.name === parsed.screen)) {
+        const currentRoute = state.routes[state.index]
+        // Only update if different from current
+        if (parsed.screen !== currentRoute.name ||
+            JSON.stringify(parsed.params) !== JSON.stringify(currentRoute.params)) {
+          isUpdatingFromHash.current = true
+          navigate(parsed.screen, parsed.params)
+        }
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [useHash, screens, state, navigate])
 
   // Register navigator with frame registry for this app
   const appContext = useAppContext()

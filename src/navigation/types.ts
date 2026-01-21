@@ -78,6 +78,10 @@ export interface NavigatorProps {
   tabBarHidden?: boolean
   /** Custom tab bar style */
   tabBarStyle?: React.CSSProperties
+  /** Enable hash-based URL routing (e.g., #/screen?param=value) */
+  useHash?: boolean
+  /** Navigator ID for screen registry (defaults to 'main') */
+  id?: string
 }
 
 // Tab definition
@@ -91,6 +95,7 @@ export interface TabDefinition {
 }
 
 // Tab navigator props
+// Tab navigator props
 export interface TabNavigatorProps {
   /** Tab definitions via children or tabs prop */
   children?: ReactNode
@@ -103,4 +108,18 @@ export interface TabNavigatorProps {
   tabBarHidden?: boolean
   /** Custom tab bar style */
   tabBarStyle?: React.CSSProperties
+}
+
+// Screen registry entry (for external access)
+export interface ScreenRegistryEntry {
+  name: string
+  options?: ScreenOptions
+  navigatorId: string
+  navigatorType: NavigatorType
+  /** Tab-specific props if screen is a tab */
+  tab?: {
+    label?: string
+    icon?: ReactNode
+    activeIcon?: ReactNode
+  }
 }

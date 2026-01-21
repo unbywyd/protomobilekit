@@ -509,6 +509,13 @@ export {
   useRoute,
   TabNavigator,
   useTab,
+  // Screen Registry API
+  getScreens,
+  getScreenNames,
+  hasScreen,
+  subscribeToScreenRegistry,
+  parseHash,
+  buildHash,
 } from './navigation'
 
 export type {
@@ -522,4 +529,5 @@ export type {
   NavigatorProps,
   TabDefinition,
   TabNavigatorProps,
+  ScreenRegistryEntry,
 } from './navigation'

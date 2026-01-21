@@ -11,7 +11,7 @@ export {
 } from './theme'
 
 // Typography
-export { Text, Title, Subtitle, Caption, Label, type TextProps } from './Text'
+export { Text, Title, Subtitle, Caption, Label, Paragraph, type TextProps } from './Text'
 
 // Layout
 export { Screen, ScrollView, Section, Content, type ScreenProps, type ScrollViewProps, type SectionProps, type ContentProps } from './Screen'
