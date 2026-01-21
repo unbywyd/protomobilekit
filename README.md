@@ -6,6 +6,12 @@ React component library for rapid mobile app prototyping. Build iOS and Android-
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Best Practices](#best-practices)
+  - [Project Structure](#project-structure)
+  - [Entity Registration](#entity-registration)
+  - [Frame Registration](#frame-registration)
+  - [User & Role Registration](#user--role-registration)
+  - [Flow Registration](#flow-registration)
 - [Core Concepts](#core-concepts)
   - [Canvas & Apps](#canvas--apps)
   - [Canvas SDK](#canvas-sdk)
@@ -99,6 +105,396 @@ function HomeScreen() {
   )
 }
 ```
+
+---
+
+## Best Practices
+
+Follow these conventions for a well-organized prototype that's easy to maintain, document, and automate.
+
+### Project Structure
+
+Recommended folder structure for multi-app prototypes:
+
+```
+src/
+├── apps/                    # Each app in separate folder
+│   ├── customer/
+│   │   ├── index.tsx        # App component with Navigator
+│   │   ├── screens/         # Screen components
+│   │   │   ├── HomeScreen.tsx
+│   │   │   ├── OrdersScreen.tsx
+│   │   │   └── ProfileScreen.tsx
+│   │   ├── frames.ts        # Frame definitions for this app
+│   │   └── users.ts         # Test users for this app
+│   ├── admin/
+│   │   ├── index.tsx
+│   │   ├── screens/
+│   │   ├── frames.ts
+│   │   └── users.ts
+│   └── courier/
+│       └── ...
+├── entities/                # Shared entity definitions
+│   ├── index.ts             # Export all + seed function
+│   ├── Order.ts
+│   ├── Restaurant.ts
+│   ├── User.ts
+│   └── Courier.ts
+├── flows/                   # User flow definitions
+│   └── index.ts
+├── App.tsx                  # Main app with Canvas
+└── main.tsx                 # Entry point
+```
+
+### Entity Registration
+
+**Rule: Define all entities BEFORE app renders.** Entities are shared across all apps.
+
+```tsx
+// src/entities/Order.ts
+import { entity } from 'protomobilekit'
+import type { InferEntity } from 'protomobilekit'
+
+export const Order = entity({
+  name: 'Order',
+  fields: {
+    status: { type: 'enum', values: ['pending', 'preparing', 'delivering', 'delivered'] as const },
+    customerId: 'string',
+    courierId: { type: 'string', default: null },
+    restaurantId: 'string',
+    items: 'string',      // JSON string
+    total: 'number',
+    address: 'string',
+    createdAt: 'date',
+  },
+})
+
+export type Order = InferEntity<typeof Order>
+```
+
+```tsx
+// src/entities/index.ts
+import { useStore, resetStore } from 'protomobilekit'
+
+// Import all entities (this registers them)
+export * from './Order'
+export * from './Restaurant'
+export * from './User'
+export * from './Courier'
+
+// Seed initial data
+export function seedData() {
+  const store = useStore.getState()
+  const silent = { silent: true }  // No events during seeding
+
+  // Check if already seeded
+  if (store.getAll('Restaurant').length > 0) return
+
+  // Restaurants
+  store.create('Restaurant', { id: 'r1', name: 'Sushi Master', rating: 4.8 }, silent)
+  store.create('Restaurant', { id: 'r2', name: 'Pizza Place', rating: 4.5 }, silent)
+
+  // Orders with different statuses
+  store.create('Order', {
+    id: 'o1',
+    status: 'pending',
+    customerId: 'alice',
+    restaurantId: 'r1',
+    items: JSON.stringify([{ name: 'Dragon Roll', qty: 2, price: 450 }]),
+    total: 900,
+    address: '123 Main St',
+  }, silent)
+
+  // ... more seed data
+}
+```
+
+```tsx
+// src/main.tsx
+import { seedData } from './entities'
+
+// Seed data BEFORE rendering
+seedData()
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <App />
+)
+```
+
+### Frame Registration
+
+**Rule: Register EVERY screen as a frame.** This enables:
+- DevTools Frame Browser navigation
+- Automated screenshot generation
+- Documentation generation
+- LLM/MCP integration
+
+```tsx
+// src/apps/customer/frames.ts
+import { defineFrames, createFrame } from 'protomobilekit'
+import { HomeScreen } from './screens/HomeScreen'
+import { OrdersScreen } from './screens/OrdersScreen'
+import { OrderDetailsScreen } from './screens/OrderDetailsScreen'
+import { ProfileScreen } from './screens/ProfileScreen'
+
+// Create frame for each screen
+export const homeFrame = createFrame({
+  id: 'home',
+  name: '1.1 Home',
+  description: 'Restaurant list with search and filters',
+  component: HomeScreen,
+  tags: ['main', 'entry'],
+})
+
+export const ordersFrame = createFrame({
+  id: 'orders',
+  name: '1.2 Orders',
+  description: 'Order history with status filters',
+  component: OrdersScreen,
+  tags: ['orders'],
+})
+
+export const orderDetailsFrame = createFrame({
+  id: 'orderDetails',
+  name: '1.3 Order Details',
+  description: 'Single order with timeline and courier info',
+  component: OrderDetailsScreen,
+  tags: ['orders', 'detail'],
+  // Custom navigation with params
+  onNavigate: (nav) => nav.navigate('orderDetails', { id: 'o1' }),
+})
+
+export const profileFrame = createFrame({
+  id: 'profile',
+  name: '1.4 Profile',
+  description: 'User profile and settings',
+  component: ProfileScreen,
+  tags: ['profile'],
+})
+
+// Register all frames for this app
+defineFrames({
+  appId: 'customer',
+  appName: 'Customer App',
+  initial: 'home',
+  frames: [homeFrame, ordersFrame, orderDetailsFrame, profileFrame],
+})
+```
+
+**Naming convention:** Use numbered prefixes (`1.1`, `1.2`, `2.1`) for ordering in Frame Browser.
+
+### User & Role Registration
+
+**Rule: Define test users for EACH app.** This enables:
+- Quick user switching in DevTools Auth Panel
+- Testing different roles/permissions
+- Realistic prototype demos
+
+```tsx
+// src/apps/customer/users.ts
+import { defineUsers, defineRoles } from 'protomobilekit'
+
+// Define roles first
+defineRoles({
+  appId: 'customer',
+  roles: [
+    { value: 'regular', label: 'Regular' },
+    { value: 'premium', label: 'Premium', color: '#f59e0b' },
+    { value: 'vip', label: 'VIP', color: '#8b5cf6' },
+  ],
+})
+
+// Define test users
+defineUsers({
+  appId: 'customer',
+  users: [
+    {
+      id: 'alice',
+      name: 'Alice Johnson',
+      phone: '+1 234 567 8901',
+      role: 'premium',
+      avatar: 'https://i.pravatar.cc/150?u=alice',
+      // Custom fields for this app
+      address: '123 Main Street, New York',
+      defaultPayment: 'card',
+    },
+    {
+      id: 'bob',
+      name: 'Bob Smith',
+      phone: '+1 234 567 8902',
+      role: 'regular',
+      avatar: 'https://i.pravatar.cc/150?u=bob',
+    },
+    {
+      id: 'charlie',
+      name: 'Charlie Brown',
+      phone: '+1 234 567 8903',
+      role: 'vip',
+      avatar: 'https://i.pravatar.cc/150?u=charlie',
+    },
+  ],
+})
+```
+
+```tsx
+// src/apps/admin/users.ts
+import { defineUsers, defineRoles } from 'protomobilekit'
+
+defineRoles({
+  appId: 'admin',
+  roles: [
+    { value: 'manager', label: 'Manager' },
+    { value: 'superadmin', label: 'Super Admin', color: '#ef4444' },
+  ],
+})
+
+defineUsers({
+  appId: 'admin',
+  users: [
+    { id: 'admin1', name: 'Admin User', phone: '+1 999 000 0001', role: 'manager' },
+    { id: 'super', name: 'Super Admin', phone: '+1 999 000 0000', role: 'superadmin' },
+  ],
+})
+```
+
+**Tip:** User IDs should match entity foreign keys (e.g., `order.customerId = 'alice'`).
+
+### Flow Registration
+
+**Rule: Define user flows for key journeys.** This enables:
+- Task tracking in DevTools Flows Panel
+- Acceptance criteria documentation
+- QA testing checklists
+
+```tsx
+// src/flows/index.ts
+import { defineFlow } from 'protomobilekit'
+import { homeFrame, ordersFrame, orderDetailsFrame } from '../apps/customer/frames'
+import { checkoutFrame } from '../apps/customer/frames'
+
+// Order placement flow
+defineFlow({
+  id: 'place-order',
+  name: 'Place Order',
+  description: 'Complete flow from browsing to order confirmation',
+  appId: 'customer',
+  steps: [
+    {
+      frame: homeFrame,
+      tasks: [
+        'Browse restaurant list',
+        'Use search to find restaurant',
+        'Apply cuisine filter',
+        'Select a restaurant',
+      ],
+    },
+    {
+      frame: menuFrame,
+      tasks: [
+        'View menu categories',
+        'Add items to cart',
+        'Customize item (if available)',
+        'View cart summary',
+      ],
+    },
+    {
+      frame: checkoutFrame,
+      tasks: [
+        'Confirm delivery address',
+        'Select payment method',
+        'Apply promo code (optional)',
+        'Place order',
+      ],
+    },
+    {
+      frame: orderDetailsFrame,
+      tasks: [
+        'View order confirmation',
+        'See estimated delivery time',
+        'Track order status',
+      ],
+    },
+  ],
+})
+
+// Order tracking flow
+defineFlow({
+  id: 'track-order',
+  name: 'Track Order',
+  description: 'Monitor order from preparation to delivery',
+  appId: 'customer',
+  steps: [
+    {
+      frame: ordersFrame,
+      tasks: ['View active orders', 'Select order to track'],
+    },
+    {
+      frame: orderDetailsFrame,
+      tasks: [
+        'View order timeline',
+        'See courier information',
+        'Contact courier (if available)',
+        'Confirm delivery',
+      ],
+    },
+  ],
+})
+```
+
+### Complete Setup Example
+
+```tsx
+// src/main.tsx
+import ReactDOM from 'react-dom/client'
+import { ThemeProvider, DevTools } from 'protomobilekit'
+
+// 1. Import entities (registers them)
+import { seedData } from './entities'
+
+// 2. Import user definitions (registers them)
+import './apps/customer/users'
+import './apps/admin/users'
+import './apps/courier/users'
+
+// 3. Import frame definitions (registers them)
+import './apps/customer/frames'
+import './apps/admin/frames'
+import './apps/courier/frames'
+
+// 4. Import flow definitions (registers them)
+import './flows'
+
+// 5. Seed data
+seedData()
+
+// 6. Import main app
+import App from './App'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <ThemeProvider>
+    <App />
+    <DevTools />
+  </ThemeProvider>
+)
+```
+
+### Summary Checklist
+
+Before considering your prototype complete:
+
+- [ ] **Entities:** All data types defined with proper fields and types
+- [ ] **Seed Data:** Realistic test data for all entities
+- [ ] **Frames:** Every screen registered with description and tags
+- [ ] **Users:** Test users defined for each app with appropriate roles
+- [ ] **Flows:** Key user journeys documented as flows
+- [ ] **Hash Routing:** Navigator uses `useHash` for URL-based navigation
+- [ ] **DevTools:** Enabled for easy debugging and demonstration
+
+This structure ensures your prototype is:
+- **Discoverable** - All screens accessible via Frame Browser
+- **Testable** - Quick user switching and flow tracking
+- **Automatable** - MCP/Puppeteer can navigate and screenshot any screen
+- **Documentable** - Frame metadata can generate documentation
 
 ---
 
