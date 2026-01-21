@@ -1,7 +1,9 @@
-import React, { createContext, useContext } from 'react'
+import React, { createContext, useContext, useEffect } from 'react'
 import { cn } from '../ui/utils'
 import { DeviceFrame } from './DeviceFrame'
 import { useAuth, useCurrentUserId } from '../auth/hooks'
+import { useCanvasState } from './useCanvasState'
+import { registerApps, unregisterApps } from './appsRegistry'
 import type { AppDefinition, CanvasConfig, CanvasLayout } from './types'
 
 // App context to identify current app
@@ -103,11 +105,53 @@ export function Canvas({
   showLabels = true,
   className,
 }: CanvasProps) {
+  const { hiddenApps, fullscreenApp, exitFullscreen } = useCanvasState()
+
+  // Register apps for DevTools
+  useEffect(() => {
+    registerApps(apps)
+    return () => unregisterApps()
+  }, [apps])
+
   const layoutClasses: Record<CanvasLayout, string> = {
     row: 'flex flex-row flex-wrap justify-center items-start',
     grid: 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 place-items-center',
     freeform: 'relative',
   }
+
+  // Fullscreen mode - render single app without frame
+  if (fullscreenApp) {
+    const app = apps.find(a => a.id === fullscreenApp)
+    if (app) {
+      return (
+        <div
+          className="min-h-screen w-full flex flex-col"
+          style={{ backgroundColor: background }}
+        >
+          {/* Exit fullscreen button */}
+          <button
+            onClick={exitFullscreen}
+            className="fixed top-4 right-4 z-50 px-3 py-2 bg-neutral-900/90 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+            </svg>
+            Exit Fullscreen
+          </button>
+
+          {/* Fullscreen app content */}
+          <AppContext.Provider value={{ appId: app.id, appName: app.name }}>
+            <div className="flex-1 w-full max-w-[720px] mx-auto overflow-auto">
+              {app.component()}
+            </div>
+          </AppContext.Provider>
+        </div>
+      )
+    }
+  }
+
+  // Normal mode - render visible apps
+  const visibleApps = apps.filter(app => !hiddenApps.has(app.id))
 
   return (
     <div
@@ -118,7 +162,7 @@ export function Canvas({
       )}
       style={{ backgroundColor: background, gap }}
     >
-      {apps.map((app) => (
+      {visibleApps.map((app) => (
         <AppContext.Provider
           key={app.id}
           value={{ appId: app.id, appName: app.name }}

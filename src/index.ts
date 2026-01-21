@@ -317,6 +317,22 @@ export {
   useApp,
   defineApp,
   DEVICE_PRESETS,
+  // Canvas state (visibility & fullscreen)
+  useCanvasState,
+  getCanvasState,
+  isAppVisible,
+  isAppFullscreen,
+  hasFullscreenApp,
+  toggleAppVisibility,
+  setAppVisibility,
+  showAllApps,
+  enterFullscreen,
+  exitFullscreen,
+  toggleFullscreen,
+  resetCanvasState,
+  // Apps registry
+  useAppsRegistry,
+  getRegisteredApps,
 } from './canvas'
 
 export type {
@@ -328,6 +344,7 @@ export type {
   CanvasLayout,
   CanvasConfig,
   UseAppReturn,
+  CanvasState,
 } from './canvas'
 
 // Events
@@ -358,6 +375,7 @@ export {
   DevTools,
   StateInspector,
   EventLog,
+  AppsPanel,
 } from './devtools'
 
 export type {
@@ -365,6 +383,7 @@ export type {
   DevToolsTab,
   StateInspectorProps,
   EventLogProps,
+  AppsPanelProps,
 } from './devtools'
 
 // Frames - Screen registry and browser

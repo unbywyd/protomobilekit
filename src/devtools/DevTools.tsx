@@ -3,11 +3,19 @@ import { StateInspector } from './StateInspector'
 import { EventLog } from './EventLog'
 import { AuthPanel } from './AuthPanel'
 import { FlowsPanel } from './FlowsPanel'
+import { AppsPanel } from './AppsPanel'
 import { FrameBrowser } from '../frames/FrameBrowser'
-import { cn, scrollbarStyles } from '../ui/utils'
-import { DatabaseIcon, ActivityIcon, CloseIcon, TerminalIcon, FramesIcon, UsersIcon, FlowIcon } from './icons'
+import { useAppsRegistry } from '../canvas/useAppsRegistry'
+import { cn, scrollbarStyles, scrollbarHide } from '../ui/utils'
+import { DatabaseIcon, ActivityIcon, CloseIcon, TerminalIcon, FramesIcon, UsersIcon, FlowIcon, AppsIcon } from './icons'
 
-export type DevToolsTab = 'state' | 'events' | 'frames' | 'auth' | 'flows'
+// Check if device is mobile (by screen width only, not touch capability)
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth <= 768
+}
+
+export type DevToolsTab = 'state' | 'events' | 'frames' | 'auth' | 'flows' | 'apps'
 
 export interface DevToolsProps {
   /** Show state inspector */
@@ -20,6 +28,8 @@ export interface DevToolsProps {
   showAuth?: boolean
   /** Show flows panel */
   showFlows?: boolean
+  /** Show apps panel (visibility & fullscreen) */
+  showApps?: boolean
   /** Initial tab */
   defaultTab?: DevToolsTab
   /** Position */
@@ -43,20 +53,32 @@ export function DevTools({
   showFrames = true,
   showAuth = true,
   showFlows = true,
-  defaultTab = 'frames',
+  showApps = true,
+  defaultTab = 'apps',
   position = 'right',
   devOnly = true,
   draggable = true,
   className,
 }: DevToolsProps) {
   const [activeTab, setActiveTab] = useState<DevToolsTab>(defaultTab)
+  const apps = useAppsRegistry()
   const panelRef = useRef<HTMLDivElement>(null)
   const dragHandleRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef({ x: 0, y: 0 })
   const positionRef = useRef({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
-  
+  const [isMobile, setIsMobile] = useState(() => isMobileDevice())
+
+  // Track mobile state on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(isMobileDevice())
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   // Initialize collapsed state from localStorage
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -276,6 +298,7 @@ export function DevTools({
   }
 
   if (collapsed) {
+    // On desktop use drag position, on mobile fixed bottom-right
     const collapsedPosition = draggable && panelPosition
       ? { left: `${panelPosition.x}px`, top: `${panelPosition.y}px` }
       : position === 'right' ? { right: '1rem' } : { left: '1rem' }
@@ -285,113 +308,151 @@ export function DevTools({
         onClick={() => setCollapsed(false)}
         style={collapsedPosition}
         className={cn(
-          'fixed top-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg',
+          'fixed z-50 flex items-center gap-2 px-3 py-2 rounded-lg',
           'bg-neutral-900 border border-neutral-800 text-neutral-300',
           'hover:bg-neutral-800 hover:text-white transition-all',
           'text-xs font-medium shadow-xl',
-          !draggable && (position === 'right' ? 'right-4' : 'left-4'),
+          // Mobile: fixed bottom-right (override inline styles)
+          'max-[768px]:!top-auto max-[768px]:!left-auto max-[768px]:!right-4 max-[768px]:!bottom-4',
+          // Desktop: top position
+          'min-[769px]:top-4',
+          !draggable && (position === 'right' ? 'min-[769px]:right-4' : 'min-[769px]:left-4'),
           className
         )}
       >
         <TerminalIcon size={14} />
-        DevTools
+        <span className="hidden min-[769px]:inline">DevTools</span>
       </button>
     )
   }
 
+  // Use CSS-based responsive - panel uses media queries
+  // On mobile (<= 768px): full width at bottom, no drag position
+  // On desktop: use saved drag position or default
+  const panelStyles = getPositionStyles()
+
   return (
     <div
       ref={panelRef}
-      style={getPositionStyles()}
+      style={panelStyles}
       className={cn(
-        'fixed w-[420px] z-50 rounded-xl overflow-hidden',
+        'fixed z-50 overflow-hidden',
         'bg-neutral-950 border border-neutral-800 shadow-2xl',
         'flex flex-col',
-        !draggable && (position === 'right' ? 'right-4' : 'left-4'),
-        !draggable && 'top-4 bottom-4',
+        // Mobile: fullscreen (CSS overrides inline styles)
+        'max-[768px]:!inset-0 max-[768px]:!top-0 max-[768px]:!left-0 max-[768px]:!right-0 max-[768px]:!bottom-0',
+        'max-[768px]:!max-h-none max-[768px]:!h-full max-[768px]:!w-full max-[768px]:rounded-none',
+        // Desktop: fixed width
+        'min-[769px]:w-[490px] min-[769px]:rounded-xl',
+        !draggable && (position === 'right' ? 'min-[769px]:right-4' : 'min-[769px]:left-4'),
+        !draggable && 'min-[769px]:top-4 min-[769px]:bottom-4',
         className
       )}
     >
       {/* Header - draggable handle */}
       <div
         ref={dragHandleRef}
-        onMouseDown={draggable ? handleDragStart : undefined}
-        onTouchStart={draggable ? handleDragStart : undefined}
+        onMouseDown={!isMobile && draggable ? handleDragStart : undefined}
+        onTouchStart={!isMobile && draggable ? handleDragStart : undefined}
         className={cn(
-          'flex items-center justify-between px-1 py-1 border-b border-neutral-800/50',
-          draggable && 'cursor-move select-none',
+          'flex items-center justify-between px-1 py-1 border-b border-neutral-800/50 shrink-0',
+          'min-[769px]:cursor-move min-[769px]:select-none',
           isDragging && 'opacity-90'
         )}
       >
-        <div className="flex">
+        {/* Tabs - icons only on mobile */}
+        <div className={cn(
+          'flex flex-1',
+          scrollbarHide
+        )}>
           {showState && (
             <button
               onClick={() => setActiveTab('state')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all',
+                'flex items-center gap-1.5 px-2 py-2 text-xs font-medium rounded-lg transition-all shrink-0',
+                'min-[769px]:px-3',
                 activeTab === 'state'
                   ? 'bg-neutral-800 text-white'
                   : 'text-neutral-500 hover:text-neutral-300'
               )}
             >
               <DatabaseIcon size={14} />
-              State
+              <span className="hidden min-[769px]:inline">State</span>
             </button>
           )}
           {showEvents && (
             <button
               onClick={() => setActiveTab('events')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all',
+                'flex items-center gap-1.5 px-2 py-2 text-xs font-medium rounded-lg transition-all shrink-0',
+                'min-[769px]:px-3',
                 activeTab === 'events'
                   ? 'bg-neutral-800 text-white'
                   : 'text-neutral-500 hover:text-neutral-300'
               )}
             >
               <ActivityIcon size={14} />
-              Events
+              <span className="hidden min-[769px]:inline">Events</span>
             </button>
           )}
           {showFrames && (
             <button
               onClick={() => setActiveTab('frames')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all',
+                'flex items-center gap-1.5 px-2 py-2 text-xs font-medium rounded-lg transition-all shrink-0',
+                'min-[769px]:px-3',
                 activeTab === 'frames'
                   ? 'bg-neutral-800 text-white'
                   : 'text-neutral-500 hover:text-neutral-300'
               )}
             >
               <FramesIcon size={14} />
-              Frames
+              <span className="hidden min-[769px]:inline">Frames</span>
             </button>
           )}
           {showAuth && (
             <button
               onClick={() => setActiveTab('auth')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all',
+                'flex items-center gap-1.5 px-2 py-2 text-xs font-medium rounded-lg transition-all shrink-0',
+                'min-[769px]:px-3',
                 activeTab === 'auth'
                   ? 'bg-neutral-800 text-white'
                   : 'text-neutral-500 hover:text-neutral-300'
               )}
             >
               <UsersIcon size={14} />
-              Auth
+              <span className="hidden min-[769px]:inline">Auth</span>
             </button>
           )}
           {showFlows && (
             <button
               onClick={() => setActiveTab('flows')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all',
+                'flex items-center gap-1.5 px-2 py-2 text-xs font-medium rounded-lg transition-all shrink-0',
+                'min-[769px]:px-3',
                 activeTab === 'flows'
                   ? 'bg-neutral-800 text-white'
                   : 'text-neutral-500 hover:text-neutral-300'
               )}
             >
               <FlowIcon size={14} />
-              Flows
+              <span className="hidden min-[769px]:inline">Flows</span>
+            </button>
+          )}
+          {showApps && (
+            <button
+              onClick={() => setActiveTab('apps')}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-2 text-xs font-medium rounded-lg transition-all shrink-0',
+                'min-[769px]:px-3',
+                activeTab === 'apps'
+                  ? 'bg-neutral-800 text-white'
+                  : 'text-neutral-500 hover:text-neutral-300'
+              )}
+            >
+              <AppsIcon size={14} />
+              <span className="hidden min-[769px]:inline">Apps</span>
             </button>
           )}
         </div>
@@ -419,6 +480,9 @@ export function DevTools({
         )}
         {activeTab === 'flows' && showFlows && (
           <FlowsPanel embedded />
+        )}
+        {activeTab === 'apps' && showApps && (
+          <AppsPanel apps={apps} embedded />
         )}
       </div>
     </div>

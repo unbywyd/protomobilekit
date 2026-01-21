@@ -27,3 +27,12 @@ export const scrollbarStyles = [
   '[scrollbar-width]:thin',
   '[scrollbar-color]:rgb(38_38_38)_transparent',
 ].join(' ')
+
+/**
+ * Hide scrollbar but keep scroll functionality
+ */
+export const scrollbarHide = [
+  '[&::-webkit-scrollbar]:hidden',
+  '[scrollbar-width]:none',
+  '[-ms-overflow-style]:none',
+].join(' ')

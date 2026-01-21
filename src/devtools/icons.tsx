@@ -134,3 +134,12 @@ export const RefreshIcon = ({ size = 16, className }: IconProps) => (
     <path d="M2.5 14V10.5H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
+
+export const AppsIcon = ({ size = 16, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className}>
+    <rect x="2" y="1" width="5" height="9" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <rect x="9" y="6" width="5" height="9" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <line x1="4.5" y1="8" x2="4.5" y2="8.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="11.5" y1="13" x2="11.5" y2="13.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+)
