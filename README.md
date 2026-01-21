@@ -8,6 +8,7 @@ React component library for rapid mobile app prototyping. Build iOS and Android-
 - [Quick Start](#quick-start)
 - [Core Concepts](#core-concepts)
   - [Canvas & Apps](#canvas--apps)
+  - [Canvas SDK](#canvas-sdk)
   - [Navigation](#navigation)
   - [State Management](#state-management)
   - [Authentication](#authentication)
@@ -18,6 +19,7 @@ React component library for rapid mobile app prototyping. Build iOS and Android-
 - [Theming](#theming)
 - [Utilities](#utilities)
 - [DevTools](#devtools)
+- [Automation (MCP/Puppeteer)](#global-sdk-for-automation-mcppuppeteer)
 - [TypeScript](#typescript)
 
 ---
@@ -196,6 +198,87 @@ function ProfileScreen() {
   )
 }
 ```
+
+#### Canvas SDK
+
+Programmatic API for controlling Canvas - show/hide apps, fullscreen mode, and navigation.
+
+```tsx
+import { canvas } from 'protomobilekit'
+
+// Get apps
+canvas.getApps()                    // All registered apps
+canvas.getApp('admin')              // Single app by ID
+canvas.getVisibleApps()             // Only visible apps
+canvas.getHiddenApps()              // Only hidden apps
+
+// Visibility control
+canvas.show('admin')                // Show app
+canvas.hide('admin')                // Hide app
+canvas.toggle('admin')              // Toggle visibility
+canvas.showAll()                    // Show all apps
+canvas.showOnly('admin')            // Hide all except one
+canvas.isVisible('admin')           // Check if visible
+
+// Fullscreen mode (single app, no device frame, max-width 720px)
+canvas.fullscreen('admin')          // Enter fullscreen
+canvas.exitFullscreen()             // Exit fullscreen
+canvas.toggleFullscreen('admin')    // Toggle fullscreen
+canvas.isFullscreen('admin')        // Check if fullscreen
+canvas.hasFullscreen()              // Any app in fullscreen?
+canvas.getFullscreenApp()           // Get fullscreen app or null
+
+// Navigation (for automation/MCP)
+canvas.navigateTo('admin', 'orders')                    // Navigate to screen
+canvas.navigateTo('admin', 'orderDetails', { id: 'o1' }) // With params
+canvas.getCurrentRoute()             // { appId, screen, params }
+canvas.getScreens('admin')           // All screens for app
+canvas.getScreenNames('admin')       // ['home', 'orders', ...]
+
+// Subscribe to changes
+const unsubscribe = canvas.subscribe(() => {
+  console.log('Canvas state changed')
+})
+
+// Reset state
+canvas.reset()                       // Show all, exit fullscreen
+```
+
+#### Global SDK for Automation (MCP/Puppeteer)
+
+Canvas SDK is exposed globally as `window.__CANVAS_SDK__` for browser automation:
+
+```javascript
+// In Puppeteer
+await page.goto('http://localhost:5173')
+
+// Get list of apps
+const apps = await page.evaluate(() => {
+  return window.__CANVAS_SDK__.getApps().map(a => ({ id: a.id, name: a.name }))
+})
+// [{ id: 'customer', name: 'Customer App' }, { id: 'admin', name: 'Admin' }]
+
+// Get screens for an app
+const screens = await page.evaluate(() => {
+  return window.__CANVAS_SDK__.getScreenNames('admin')
+})
+// ['home', 'orders', 'orderDetails', 'settings']
+
+// Navigate to specific screen
+await page.evaluate(() => {
+  window.__CANVAS_SDK__.navigateTo('admin', 'orders')
+})
+
+// Wait for render and take screenshot
+await page.waitForTimeout(500)
+await page.screenshot({ path: 'admin-orders.png' })
+```
+
+**Use cases:**
+- **MCP Server** - LLM can request screenshots of specific screens
+- **Visual testing** - Automated screenshot comparison
+- **Documentation** - Generate screen captures programmatically
+- **E2E testing** - Navigate and verify screen state
 
 ---
 
@@ -2433,12 +2516,13 @@ import { DevTools } from 'protomobilekit'
   position="right"      // 'left' | 'right'
   devOnly={false}       // Show in production (for prototyping)
   draggable={true}      // Allow dragging
-  defaultTab="frames"   // 'state' | 'events' | 'frames' | 'auth' | 'flows'
+  defaultTab="frames"   // 'state' | 'events' | 'frames' | 'auth' | 'flows' | 'apps'
   showState={true}      // Show State tab
   showEvents={true}     // Show Events tab
   showFrames={true}     // Show Frames tab
   showAuth={true}       // Show Auth tab
   showFlows={true}      // Show Flows tab
+  showApps={true}       // Show Apps tab
 />
 ```
 
@@ -2449,16 +2533,41 @@ import { DevTools } from 'protomobilekit'
 3. **Frame Browser** - Navigate to any registered frame
 4. **Auth Panel** - Quick user switching
 5. **Flows Panel** - Track user journey progress
+6. **Apps Panel** - Show/hide apps, fullscreen mode
+
+### Apps Panel
+
+Control app visibility and enter fullscreen mode for focused testing:
+
+- **Toggle visibility** - Show/hide individual phone frames in Canvas
+- **Fullscreen mode** - Single app without device frame, max-width 720px (ideal for mobile browser testing)
+- **Show all** - Reset to show all apps
+
+```tsx
+// Or control programmatically via SDK
+import { canvas } from 'protomobilekit'
+
+canvas.hide('admin')           // Hide admin app
+canvas.fullscreen('customer')  // Fullscreen customer app
+canvas.showAll()               // Show all apps
+```
+
+### Responsive Design
+
+DevTools automatically adapts to mobile screens:
+- **Desktop** (>768px): Draggable panel, text labels on tabs
+- **Mobile** (≤768px): Fullscreen panel, icon-only tabs, fixed collapse button
 
 ### Individual Panels
 
 ```tsx
-import { StateInspector, EventLog, FrameBrowser } from 'protomobilekit'
+import { StateInspector, EventLog, FrameBrowser, AppsPanel } from 'protomobilekit'
 
 // Use panels separately
 <StateInspector embedded />
 <EventLog embedded />
 <FrameBrowser embedded />
+<AppsPanel embedded />
 ```
 
 ---
@@ -2507,6 +2616,8 @@ import type {
   CanvasProps,
   AppDefinition,
   DeviceType,
+  CanvasSDK,
+  CanvasState,
 
   // Frames
   Frame,

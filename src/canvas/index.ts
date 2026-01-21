@@ -24,6 +24,10 @@ export { useCanvasState } from './useCanvasState'
 export { registerApps, unregisterApps, getRegisteredApps, subscribeAppsRegistry } from './appsRegistry'
 export { useAppsRegistry } from './useAppsRegistry'
 
+// SDK - Programmatic API
+export { canvas } from './sdk'
+export type { CanvasSDK } from './sdk'
+
 // Types
 export type {
   DeviceType,

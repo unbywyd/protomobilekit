@@ -333,6 +333,8 @@ export {
   // Apps registry
   useAppsRegistry,
   getRegisteredApps,
+  // SDK
+  canvas,
 } from './canvas'
 
 export type {
@@ -345,6 +347,7 @@ export type {
   CanvasConfig,
   UseAppReturn,
   CanvasState,
+  CanvasSDK,
 } from './canvas'
 
 // Events
