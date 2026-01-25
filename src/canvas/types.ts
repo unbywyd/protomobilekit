@@ -92,4 +92,6 @@ export interface CanvasConfig {
   scale?: number
   /** Show device labels */
   showLabels?: boolean
+  /** Hide exit fullscreen button in fullscreen mode */
+  hideExitFullscreen?: boolean
 }

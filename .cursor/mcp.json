@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "mcp-pdf": {
+      "url": "http://127.0.0.1:4040/mcp/5cb5017a-6c98-4f58-830a-b30bb8e6cc93/7328d3f6-369b-4449-9f6e-6adea42d418c",
+      "id": "5cb5017a-6c98-4f58-830a-b30bb8e6cc93"
+    },
+    "mcp-images": {
+      "url": "http://127.0.0.1:4040/mcp/c6496b70-9696-4c46-a993-cc0b6b61fc07/7328d3f6-369b-4449-9f6e-6adea42d418c",
+      "id": "c6496b70-9696-4c46-a993-cc0b6b61fc07"
+    },
+    "mcp-screenshot": {
+      "url": "http://127.0.0.1:4040/mcp/4334de9e-2bbf-434d-bd8a-876786f96e82/7328d3f6-369b-4449-9f6e-6adea42d418c",
+      "id": "4334de9e-2bbf-434d-bd8a-876786f96e82"
+    }
+  }
+}

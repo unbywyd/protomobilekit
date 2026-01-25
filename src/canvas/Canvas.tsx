@@ -103,6 +103,7 @@ export function Canvas({
   gap = 32,
   scale = 1,
   showLabels = true,
+  hideExitFullscreen = false,
   className,
 }: CanvasProps) {
   const { hiddenApps, fullscreenApp, exitFullscreen } = useCanvasState()
@@ -129,15 +130,17 @@ export function Canvas({
           style={{ backgroundColor: background }}
         >
           {/* Exit fullscreen button */}
-          <button
-            onClick={exitFullscreen}
-            className="fixed top-4 right-4 z-50 px-3 py-2 bg-neutral-900/90 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-2"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-            </svg>
-            Exit Fullscreen
-          </button>
+          {!hideExitFullscreen && (
+            <button
+              onClick={exitFullscreen}
+              className="fixed top-4 right-4 z-50 px-3 py-2 bg-neutral-900/90 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-2"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              </svg>
+              Exit Fullscreen
+            </button>
+          )}
 
           {/* Fullscreen app content */}
           <AppContext.Provider value={{ appId: app.id, appName: app.name }}>
