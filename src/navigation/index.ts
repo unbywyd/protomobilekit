@@ -1,5 +1,6 @@
 // Stack Navigator
-export { Navigator, useNavigate, useRoute } from './Navigator'
+export { Navigator, useNavigate, useRoute, NavigationContext } from './Navigator'
+export type { NavigationContextValue } from './Navigator'
 
 // Tab Navigator
 export { TabNavigator, useTab } from './TabNavigator'

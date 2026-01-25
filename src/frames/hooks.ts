@@ -4,8 +4,8 @@ import {
   getAppFrames,
   getFrame,
   getFrameCount,
-  searchFrames,
   navigateToFrame,
+  searchFrames,
   subscribe,
 } from './registry'
 import type { AppFrames, Frame } from './types'
@@ -29,6 +29,7 @@ export function useFrameRegistry() {
     return searchFrames(query)
   }, [])
 
+  // Navigate to frame using app's Navigator actions
   const goToFrame = useCallback((appId: string, frameId: string) => {
     navigateToFrame(appId, frameId)
   }, [])

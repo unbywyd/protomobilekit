@@ -423,6 +423,11 @@ export {
   useFrameRegistry,
   useAppFrames,
   useFrame,
+  // Direct Screen API (render screen directly, bypassing app component)
+  setDirectScreen,
+  getDirectScreen,
+  clearDirectScreen,
+  subscribeDirectScreen,
   // Components
   FrameBrowser,
 } from './frames'
@@ -554,24 +559,63 @@ export type {
   ScreenRegistryEntry,
 } from './navigation'
 
-// Preview - Screen preview for screenshots & documentation
+// Screen Registry - Unified screen registry for direct rendering
 export {
-  // Components
-  ScreenPreview,
-  MockAuthProvider,
-  // Hooks
-  usePreviewMode,
-  useMockAuth,
-  useIsMockAuth,
-  // Utilities
-  getScreenComponent,
-  getRegisteredScreenNames,
-  parsePreviewParams,
-  registerScreenComponent,
-  unregisterScreenComponents,
-} from './preview'
+  // Registry functions
+  registerScreen,
+  getScreen,
+  getAppScreens,
+  getAllAppScreens,
+  subscribeScreenRegistry,
+  // URL helpers
+  parseDirectScreenFromURL,
+  buildDirectScreenURL,
+  // v2 Screen API
+  isV2Screen,
+  registerScreenV2,
+  defineScreen,
+} from './canvas/screenRegistry'
 
 export type {
-  ScreenPreviewProps,
-  MockAuthProviderProps,
-} from './preview'
+  ScreenEntry,
+  DirectScreen,
+} from './canvas/screenRegistry'
+
+// Screens v2 - View/ViewModel architecture
+export {
+  // Types (re-export for convenience)
+  coerce,
+  coerceString,
+  coerceNumber,
+  coerceBoolean,
+  coerceEnum,
+  coerceJson,
+  // Hooks
+  useResolverContext,
+  createResolverContext,
+  // Components
+  ScreenError,
+} from './screens'
+
+export type {
+  ViewModel,
+  ResolveResult,
+  ParamsResolver,
+  ParamsCodec,
+  ScreenConfig,
+  ResolverContext,
+  EntityMap,
+  FixtureRefs,
+  EntityRepo,
+  ScreenErrorProps,
+} from './screens'
+
+// Fixtures - Source of truth for default data
+export {
+  setFixtureRefs,
+  getFixtureRef,
+  isFixturesReady,
+  getAppFixtureRefs,
+  clearFixtureRefs,
+  subscribeFixtures,
+} from './fixtures'

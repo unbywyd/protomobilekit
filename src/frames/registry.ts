@@ -1,4 +1,5 @@
 import type { AppFrames, Frame, FrameNavigationRequest, FrameDefinitionInput, FrameNavigationActions, FrameInput } from './types'
+import { registerScreen } from '../canvas/screenRegistry'
 
 /**
  * Frame Registry - Central store for all app frames
@@ -94,9 +95,13 @@ export function setNavigationCallback(callback: (request: FrameNavigationRequest
 }
 
 /**
- * Navigate to a specific frame
+ * Navigate to a specific frame using traditional navigation
  * If frame has onNavigate handler - calls it with navigator
  * Otherwise resets navigator to that frame
+ *
+ * NOTE: For direct screen rendering (bypassing app component),
+ * use setDirectScreen() from canvas/screenRegistry instead.
+ * This function is kept for backward compatibility with onNavigate handlers.
  */
 export function navigateToFrame(appId: string, frameId: string): void {
   const frame = getFrame(appId, frameId)
@@ -184,12 +189,16 @@ export function createFrame(input: FrameInput): Frame {
     description: input.description,
     component: input.component,
     tags: input.tags,
+    params: input.params,
     onNavigate: input.onNavigate,
   }
 }
 
 /**
  * Define frames for an app - helper that registers and returns the definition
+ *
+ * Also registers each frame's component in the unified screenRegistry so that
+ * DirectScreenRenderer can find and render them directly (bypassing app component).
  *
  * @example
  * ```tsx
@@ -206,6 +215,23 @@ export function createFrame(input: FrameInput): Frame {
  */
 export function defineFrames(input: FrameDefinitionInput): FrameDefinitionInput {
   registerFrames(input.appId, input.appName, input.frames, input.initial)
+
+  // Also register each frame in the unified screenRegistry for direct rendering
+  // (only if component is provided - screens via defineScreen are already registered)
+  for (const frame of input.frames) {
+    if (frame.component) {
+      registerScreen({
+        name: frame.id,
+        component: frame.component,
+        appId: input.appId,
+        navigatorId: 'frames', // Special navigator ID for frame-registered screens
+        label: frame.name,
+        description: frame.description,
+        tags: frame.tags,
+      })
+    }
+  }
+
   return input
 }
 

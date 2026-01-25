@@ -15,15 +15,21 @@ import { eventBus } from '../events/bus'
 import { useAppContext } from '../canvas/Canvas'
 import { registerNavigator, unregisterNavigator } from '../frames/registry'
 import {
-  registerScreen,
-  unregisterNavigatorScreens,
+  registerScreen as registerScreenMeta,
+  unregisterNavigatorScreens as unregisterScreenMeta,
   parseHash,
   buildHash,
 } from './registry'
 import {
-  registerScreenComponent,
-  unregisterScreenComponents,
-} from '../preview'
+  registerScreen as registerScreenComponent,
+  unregisterNavigatorScreens as unregisterScreenComponents,
+  subscribeDirectScreen,
+  getDirectScreen,
+  getScreen,
+} from '../canvas/screenRegistry'
+import { getFrame } from '../frames/registry'
+import { getAppUsers } from '../auth/registry'
+import { getAuthStore } from '../auth/store'
 import type {
   NavigatorProps,
   ScreenDefinition,
@@ -35,13 +41,13 @@ import type {
 } from './types'
 
 // Navigation context
-interface NavigationContextValue extends NavigationActions {
+export interface NavigationContextValue extends NavigationActions {
   state: NavigationState
   currentRoute: Route
   options: ScreenOptions
 }
 
-const NavigationContext = createContext<NavigationContextValue | null>(null)
+export const NavigationContext = createContext<NavigationContextValue | null>(null)
 
 /**
  * useNavigate - Access navigation in any component
@@ -146,8 +152,11 @@ export function Navigator({
 
   // Register screens in global registry
   useEffect(() => {
+    const appId = appContext?.appId || 'default'
+
     screens.forEach(screen => {
-      registerScreen(
+      // Register metadata in navigation registry
+      registerScreenMeta(
         screen.name,
         id,
         type,
@@ -158,30 +167,33 @@ export function Navigator({
           activeIcon: screen.activeIcon,
         } : undefined
       )
-      // Also register component for preview mode
-      registerScreenComponent(
-        screen.name,
-        screen.component,
-        id,
-        appContext?.appId
-      )
+      // Register component in unified screen registry (for direct rendering)
+      registerScreenComponent({
+        name: screen.name,
+        component: screen.component,
+        appId,
+        navigatorId: id,
+        label: screen.label,
+      })
     })
     return () => {
-      unregisterNavigatorScreens(id)
-      unregisterScreenComponents(id, appContext?.appId)
+      unregisterScreenMeta(id)
+      unregisterScreenComponents(appId, id)
     }
   }, [screens, id, type, appContext?.appId])
 
   // Get initial route from hash if enabled
+  // Note: We don't validate against screens here because screens come from useMemo
+  // and may not be available on the first render. The hash takes priority if present.
   const getInitialRoute = useCallback((): Route => {
     if (useHash && typeof window !== 'undefined') {
       const parsed = parseHash(window.location.hash)
-      if (parsed && screens.some(s => s.name === parsed.screen)) {
+      if (parsed && parsed.screen) {
         return { name: parsed.screen, params: parsed.params, key: `${parsed.screen}-${Date.now()}` }
       }
     }
     return { name: initial, params: {}, key: `${initial}-${Date.now()}` }
-  }, [useHash, initial, screens])
+  }, [useHash, initial])
 
   // Navigation state
   const [state, setState] = useState<NavigationState>(() => ({
@@ -266,7 +278,13 @@ export function Navigator({
 
     const handleHashChange = () => {
       const parsed = parseHash(window.location.hash)
-      if (parsed && screens.some(s => s.name === parsed.screen)) {
+      if (!parsed) return
+
+      const appId = appContext?.appId || 'default'
+      const existsInChildren = screens.some(s => s.name === parsed.screen)
+      const existsInRegistry = Boolean(getScreen(appId, parsed.screen, id))
+
+      if (parsed.screen && (existsInChildren || existsInRegistry)) {
         const currentRoute = state.routes[state.index]
         // Only update if different from current
         if (parsed.screen !== currentRoute.name ||
@@ -289,11 +307,74 @@ export function Navigator({
     }
   }, [appContext?.appId, navigate, goBack, replace, reset])
 
+  // Auto-login when using hash navigation (for single app mode / direct URL access)
+  // This ensures screens that need auth context work properly
+  useEffect(() => {
+    if (!useHash || !appContext?.appId) return
+
+    const store = getAuthStore(appContext.appId)
+    const isAuthenticated = store.getState().isAuthenticated
+
+    // Only auto-login if not already authenticated
+    if (isAuthenticated) return
+
+    const users = getAppUsers(appContext.appId)
+    if (!users || users.length === 0) return
+
+    // Auto-login first available user
+    const firstUser = users[0]
+    store.getState().login({
+      id: firstUser.id,
+      name: firstUser.name,
+      phone: firstUser.phone,
+      avatar: firstUser.avatar,
+      role: firstUser.role,
+    })
+  }, [useHash, appContext?.appId])
+
+  // Listen to directScreen changes and navigate automatically
+  useEffect(() => {
+    if (!appContext?.appId) return
+
+    const handleDirectScreen = () => {
+      const directScreen = getDirectScreen()
+      if (!directScreen || directScreen.appId !== appContext.appId) return
+
+      // Allow navigation even if screen isn't declared in children,
+      // as long as it's registered in the unified screen registry.
+      const existsInChildren = screens.some(s => s.name === directScreen.screen)
+      const existsInRegistry = Boolean(getScreen(appContext.appId, directScreen.screen, id))
+      if (!existsInChildren && !existsInRegistry) return
+
+      // Get params from frame definition or directScreen
+      const frame = getFrame(appContext.appId, directScreen.screen)
+      const params = directScreen.params || frame?.params || {}
+
+      // Navigate to the screen
+      const currentRoute = state.routes[state.index]
+      if (currentRoute.name !== directScreen.screen ||
+          JSON.stringify(currentRoute.params) !== JSON.stringify(params)) {
+        navigate(directScreen.screen, params)
+      }
+    }
+
+    // Check on mount
+    handleDirectScreen()
+
+    // Subscribe to changes
+    return subscribeDirectScreen(handleDirectScreen)
+  }, [appContext?.appId, screens, state, navigate])
+
   // Current route and screen
   const currentRoute = state.routes[state.index]
   const currentScreen = screens.find((s) => s.name === currentRoute.name)
   const options = currentScreen?.options || {}
-  const Component = currentScreen?.component
+  const ComponentFromChildren = currentScreen?.component
+
+  // Get component from children or registry
+  const appId = appContext?.appId || 'default'
+  const registryEntry = getScreen(appId, currentRoute.name, id)
+  const Component = ComponentFromChildren || registryEntry?.component
 
   // Context value
   const contextValue: NavigationContextValue = useMemo(
@@ -310,6 +391,7 @@ export function Navigator({
     [state, currentRoute, options, navigate, goBack, replace, reset, canGoBack]
   )
 
+  // Check if we have a component
   if (!Component) {
     return (
       <div

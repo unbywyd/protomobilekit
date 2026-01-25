@@ -26,6 +26,7 @@ React component library for rapid mobile app prototyping. Build iOS and Android-
 - [Theming](#theming)
 - [Utilities](#utilities)
 - [DevTools](#devtools)
+  - [Bypassing Guards (useDevToolsMode)](#bypassing-guards-with-usedevtoolsmode)
 - [Automation (MCP/Puppeteer)](#global-sdk-for-automation-mcppuppeteer)
 - [TypeScript](#typescript)
 
@@ -3193,6 +3194,47 @@ import { StateInspector, EventLog, FrameBrowser, AppsPanel } from 'protomobileki
 <FrameBrowser embedded />
 <AppsPanel embedded />
 ```
+
+### Bypassing Guards with useDevToolsMode
+
+When clicking frames in DevTools Frame Browser, you often want to bypass onboarding screens or auth guards to directly preview the target screen. The `useDevToolsMode` hook detects DevTools navigation:
+
+```tsx
+import { useDevToolsMode, useBypassGuards } from 'protomobilekit'
+
+function App() {
+  const [showOnboarding, setShowOnboarding] = useState(true)
+
+  // Option 1: Full control with useDevToolsMode
+  const { isDevToolsNavigation, targetFrame } = useDevToolsMode()
+
+  // Option 2: Simple boolean with useBypassGuards
+  const bypassGuards = useBypassGuards()
+
+  // Bypass onboarding when DevTools navigates to a frame
+  if (showOnboarding && !isDevToolsNavigation) {
+    return <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
+  }
+
+  return (
+    <Navigator initial="home">
+      <Navigator.Screen name="home" component={HomeScreen} />
+      <Navigator.Screen name="profile" component={ProfileScreen} />
+    </Navigator>
+  )
+}
+```
+
+**useDevToolsMode()** returns:
+- `isDevToolsNavigation: boolean` - True when current render is triggered by DevTools frame click
+- `targetFrame: { appId: string, frameId: string } | null` - The target frame being navigated to
+
+**useBypassGuards()** returns a simple `boolean` - True when guards should be bypassed.
+
+This enables:
+- Direct preview of any screen without completing onboarding
+- Testing authenticated screens without logging in
+- Frame Browser working seamlessly with protected routes
 
 ---
 

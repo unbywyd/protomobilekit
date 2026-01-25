@@ -286,7 +286,7 @@ export function DevTools({
       return {
         top: '1rem',
         [position === 'right' ? 'right' : 'left']: '1rem',
-        maxHeight: 'calc(100vh - 2rem)',
+        maxHeight: 'calc(100dvh - 2rem)',
         height: 'auto',
       }
     }

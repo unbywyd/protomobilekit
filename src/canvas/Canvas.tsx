@@ -4,6 +4,10 @@ import { DeviceFrame } from './DeviceFrame'
 import { useAuth, useCurrentUserId } from '../auth/hooks'
 import { useCanvasState } from './useCanvasState'
 import { registerApps, unregisterApps } from './appsRegistry'
+import { useDirectScreen } from './useDirectScreen'
+import { clearDirectScreen } from './screenRegistry'
+import { getAppUsers } from '../auth/registry'
+import { getAuthStore } from '../auth/store'
 import type { AppDefinition, CanvasConfig, CanvasLayout } from './types'
 
 // App context to identify current app
@@ -108,12 +112,37 @@ export function Canvas({
   className,
 }: CanvasProps) {
   const { hiddenApps, fullscreenApp, exitFullscreen } = useCanvasState()
+  const directScreen = useDirectScreen()
 
   // Register apps for DevTools
   useEffect(() => {
     registerApps(apps)
     return () => unregisterApps()
   }, [apps])
+
+  // Auto-login user when directScreen is set
+  useEffect(() => {
+    if (!directScreen) return
+
+    const users = getAppUsers(directScreen.appId)
+    if (!users || users.length === 0) return
+
+    // Find user to login
+    const targetUser = directScreen.userId
+      ? users.find(u => u.id === directScreen.userId)
+      : users[0]
+
+    if (targetUser) {
+      const store = getAuthStore(directScreen.appId)
+      store.getState().login({
+        id: targetUser.id,
+        name: targetUser.name,
+        phone: targetUser.phone,
+        avatar: targetUser.avatar,
+        role: targetUser.role,
+      })
+    }
+  }, [directScreen?.appId, directScreen?.userId])
 
   const layoutClasses: Record<CanvasLayout, string> = {
     row: 'flex flex-row flex-wrap justify-center items-start',
@@ -125,24 +154,31 @@ export function Canvas({
   if (fullscreenApp) {
     const app = apps.find(a => a.id === fullscreenApp)
     if (app) {
+      // Check if this app has a direct screen to render
+      const appDirectScreen = directScreen?.appId === app.id ? directScreen : null
+
       return (
         <div
           className={cn(
-            "min-h-screen w-full flex flex-col",
+            "w-full flex flex-col overflow-hidden",
             showFrameInFullscreen && "items-center justify-center p-8"
           )}
-          style={{ backgroundColor: background }}
+          style={{ backgroundColor: background, height: '100dvh' }}
         >
           {/* Exit fullscreen button */}
           {!hideExitFullscreen && (
             <button
-              onClick={exitFullscreen}
+              onClick={() => {
+                // Clear direct screen when exiting fullscreen
+                if (appDirectScreen) clearDirectScreen()
+                exitFullscreen()
+              }}
               className="fixed top-4 right-4 z-50 px-3 py-2 bg-neutral-900/90 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-2"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
               </svg>
-              Exit Fullscreen
+              {appDirectScreen ? 'Exit Screen' : 'Exit Fullscreen'}
             </button>
           )}
 
@@ -154,7 +190,7 @@ export function Canvas({
                 config={app.deviceConfig}
                 scale={scale}
                 showLabel={showLabels}
-                label={app.name}
+                label={appDirectScreen ? `${app.name} → ${appDirectScreen.screen}` : app.name}
               >
                 {app.component()}
               </DeviceFrame>
@@ -175,28 +211,33 @@ export function Canvas({
   return (
     <div
       className={cn(
-        'min-h-screen w-full p-8 overflow-auto',
+        'w-full p-8 overflow-auto',
         layoutClasses[layout],
         className
       )}
-      style={{ backgroundColor: background, gap }}
+      style={{ backgroundColor: background, gap, minHeight: '100dvh' }}
     >
-      {visibleApps.map((app) => (
-        <AppContext.Provider
-          key={app.id}
-          value={{ appId: app.id, appName: app.name }}
-        >
-          <DeviceFrame
-            device={app.device}
-            config={app.deviceConfig}
-            scale={scale}
-            showLabel={showLabels}
-            label={app.name}
+      {visibleApps.map((app) => {
+        // Check if this app has a direct screen set
+        const appDirectScreen = directScreen?.appId === app.id ? directScreen : null
+
+        return (
+          <AppContext.Provider
+            key={app.id}
+            value={{ appId: app.id, appName: app.name }}
           >
-            {app.component()}
-          </DeviceFrame>
-        </AppContext.Provider>
-      ))}
+            <DeviceFrame
+              device={app.device}
+              config={app.deviceConfig}
+              scale={scale}
+              showLabel={showLabels}
+              label={appDirectScreen ? `${app.name} → ${appDirectScreen.screen}` : app.name}
+            >
+              {app.component()}
+            </DeviceFrame>
+          </AppContext.Provider>
+        )
+      })}
     </div>
   )
 }

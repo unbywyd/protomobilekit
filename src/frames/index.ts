@@ -57,3 +57,11 @@ export { useFrameRegistry, useAppFrames, useFrame } from './hooks'
 
 // Components
 export { FrameBrowser, type FrameBrowserProps } from './FrameBrowser'
+
+// Re-export direct screen API from canvas/screenRegistry for convenience
+export {
+  setDirectScreen,
+  getDirectScreen,
+  clearDirectScreen,
+  subscribeDirectScreen,
+} from '../canvas/screenRegistry'

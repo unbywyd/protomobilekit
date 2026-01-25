@@ -28,6 +28,25 @@ export { useAppsRegistry } from './useAppsRegistry'
 export { canvas } from './sdk'
 export type { CanvasSDK } from './sdk'
 
+// Screen Registry - Unified screen registry for direct rendering
+export {
+  registerScreen,
+  unregisterNavigatorScreens,
+  getScreen,
+  getAppScreens,
+  getAllAppScreens,
+  getScreenNames,
+  subscribeScreenRegistry,
+  setDirectScreen,
+  getDirectScreen,
+  clearDirectScreen,
+  subscribeDirectScreen,
+  parseDirectScreenFromURL,
+  buildDirectScreenURL,
+  type ScreenEntry,
+  type DirectScreen,
+} from './screenRegistry'
+
 // Types
 export type {
   DeviceType,

@@ -26,10 +26,12 @@ export interface Frame {
   name: string
   /** Brief description of what this screen does */
   description?: string
-  /** The screen component */
-  component: ComponentType<any>
+  /** The screen component (optional for screens registered via defineScreen) */
+  component?: ComponentType<any>
   /** Tags for filtering/grouping */
   tags?: string[]
+  /** Default params for direct rendering (e.g. { id: 'r1' }) */
+  params?: Record<string, unknown>
   /** Custom navigation handler - called on click instead of default navigation */
   onNavigate?: FrameNavigateHandler
 }
@@ -88,10 +90,12 @@ export interface FrameInput {
   name: string
   /** Brief description of what this screen does */
   description?: string
-  /** The screen component */
-  component: ComponentType<any>
+  /** The screen component (optional for screens registered via defineScreen) */
+  component?: ComponentType<any>
   /** Tags for filtering/grouping */
   tags?: string[]
+  /** Default params for direct rendering (e.g. { id: 'r1' }) */
+  params?: Record<string, unknown>
   /** Custom navigation handler - called on click instead of default navigation */
   onNavigate?: FrameNavigateHandler
 }
