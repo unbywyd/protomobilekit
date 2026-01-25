@@ -17,6 +17,7 @@ React component library for rapid mobile app prototyping. Build iOS and Android-
   - [Canvas SDK](#canvas-sdk)
   - [Preview Mode](#preview-mode)
   - [Navigation](#navigation)
+  - [Screen Architecture (defineScreen)](#screen-architecture-definescreen)
   - [State Management](#state-management)
   - [Authentication](#authentication)
   - [Events](#events)
@@ -223,67 +224,78 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 ```
 
-### Frame Registration
+### Screen Registration
 
-**Rule: Register EVERY screen as a frame.** This enables:
-- DevTools Frame Browser navigation
-- Automated screenshot generation
-- Documentation generation
-- LLM/MCP integration
+**Use `defineScreen` to create screens.** This:
+- Creates a React component for use in Navigator
+- Automatically registers screen for DevTools
+- Enables direct URL access to screens
+- Separates View (UI) from useCase (logic)
 
 ```tsx
-// src/apps/customer/frames.ts
+// src/apps/customer/screens/restaurant/index.ts
+import { defineScreen } from 'protomobilekit'
+import { RestaurantView } from './RestaurantView'
+import { useRestaurantCase } from './useRestaurantCase'
+import { resolveRestaurantParams } from './resolve'
+import { restaurantParamsCodec } from './params'
+
+export const RestaurantScreen = defineScreen({
+  appId: 'customer',
+  name: 'restaurant',
+  View: RestaurantView,
+  useCase: useRestaurantCase,
+  resolveParams: resolveRestaurantParams,
+  paramsCodec: restaurantParamsCodec,
+  tags: ['detail', 'restaurant'],
+  description: 'Restaurant menu with dishes',
+})
+```
+
+Then use in Navigator:
+
+```tsx
+// src/apps/customer/index.tsx
+import { RestaurantScreen } from './screens/restaurant'
+
+<Navigator initial="home" type="tabs">
+  <Navigator.Screen name="home" component={HomeScreen} />
+  <Navigator.Screen name="restaurant" component={RestaurantScreen} />
+  <Navigator.Screen name="orders" component={OrdersScreen} />
+</Navigator>
+```
+
+### Frame Registration (Optional)
+
+For additional DevTools organization (flows, custom navigation), use frames:
+
+```tsx
 import { defineFrames, createFrame } from 'protomobilekit'
-import { HomeScreen } from './screens/HomeScreen'
-import { OrdersScreen } from './screens/OrdersScreen'
-import { OrderDetailsScreen } from './screens/OrderDetailsScreen'
-import { ProfileScreen } from './screens/ProfileScreen'
+import { RestaurantScreen } from './screens/restaurant'
 
-// Create frame for each screen
-export const homeFrame = createFrame({
-  id: 'home',
-  name: '1.1 Home',
-  description: 'Restaurant list with search and filters',
-  component: HomeScreen,
-  tags: ['main', 'entry'],
+const restaurantFrame = createFrame({
+  id: 'restaurant',
+  name: '1.2 Restaurant',
+  description: 'Restaurant menu with dishes',
+  // Can use defineScreen component
+  component: RestaurantScreen,
+  tags: ['detail'],
+  // Custom navigation with default params
+  onNavigate: (nav) => nav.navigate('restaurant', { id: 'r1' }),
 })
 
-export const ordersFrame = createFrame({
-  id: 'orders',
-  name: '1.2 Orders',
-  description: 'Order history with status filters',
-  component: OrdersScreen,
-  tags: ['orders'],
-})
-
-export const orderDetailsFrame = createFrame({
-  id: 'orderDetails',
-  name: '1.3 Order Details',
-  description: 'Single order with timeline and courier info',
-  component: OrderDetailsScreen,
-  tags: ['orders', 'detail'],
-  // Custom navigation with params
-  onNavigate: (nav) => nav.navigate('orderDetails', { id: 'o1' }),
-})
-
-export const profileFrame = createFrame({
-  id: 'profile',
-  name: '1.4 Profile',
-  description: 'User profile and settings',
-  component: ProfileScreen,
-  tags: ['profile'],
-})
-
-// Register all frames for this app
 defineFrames({
   appId: 'customer',
   appName: 'Customer App',
   initial: 'home',
-  frames: [homeFrame, ordersFrame, orderDetailsFrame, profileFrame],
+  frames: [homeFrame, restaurantFrame, ordersFrame],
 })
 ```
 
-**Naming convention:** Use numbered prefixes (`1.1`, `1.2`, `2.1`) for ordering in Frame Browser.
+**Note:** `defineScreen` already registers screens for DevTools. Frames are only needed for:
+- Custom display names (e.g., "1.2 Restaurant")
+- Custom navigation handlers with default params
+- Organizing screens into flows
 
 ### User & Role Registration
 
@@ -1015,6 +1027,267 @@ Use cases:
 - **External navigation** - route to screens from outside React
 - **Testing** - verify screen registration
 - **LLM integration** - bots can discover available screens
+
+---
+
+### Screen Architecture (defineScreen)
+
+Create screens with View/ViewModel separation for better testability and code organization.
+
+#### Basic Usage
+
+```tsx
+import { defineScreen, useNavigate, useQuery, useRepo } from 'protomobilekit'
+import type { ViewModel } from 'protomobilekit'
+
+// 1. Define types
+interface RestaurantParams {
+  id: string
+}
+
+interface RestaurantState {
+  restaurant: Restaurant | null
+  dishes: Dish[]
+}
+
+interface RestaurantActions {
+  goBack: () => void
+  orderDish: (dishId: string) => void
+}
+
+type RestaurantVM = ViewModel<RestaurantState, RestaurantActions>
+
+// 2. Create View (pure UI, only renders VM)
+function RestaurantView({ vm }: { vm: RestaurantVM }) {
+  const { state, actions } = vm
+
+  if (!state.restaurant) {
+    return <Text>Restaurant not found</Text>
+  }
+
+  return (
+    <Screen header={<Header title={state.restaurant.name} showBack />}>
+      <List
+        items={state.dishes}
+        renderItem={(dish) => (
+          <ListItem onPress={() => actions.orderDish(dish.id)}>
+            {dish.name} - ${dish.price}
+          </ListItem>
+        )}
+      />
+    </Screen>
+  )
+}
+
+// 3. Create useCase (logic + data → ViewModel)
+function useRestaurantCase(params: RestaurantParams): RestaurantVM {
+  const { goBack } = useNavigate()
+  const { items: restaurants } = useQuery<Restaurant>('Restaurant', {
+    filter: r => r.id === params.id
+  })
+  const { items: dishes } = useQuery<Dish>('Dish', {
+    filter: d => d.restaurantId === params.id
+  })
+  const { create: createOrder } = useRepo('Order')
+
+  return {
+    state: {
+      restaurant: restaurants[0] ?? null,
+      dishes,
+    },
+    actions: {
+      goBack,
+      orderDish: (dishId) => {
+        const dish = dishes.find(d => d.id === dishId)
+        if (dish) {
+          createOrder({ dishId, price: dish.price })
+        }
+      },
+    },
+  }
+}
+
+// 4. Define screen (returns React component)
+export const RestaurantScreen = defineScreen({
+  appId: 'customer',
+  name: 'restaurant',
+  View: RestaurantView,
+  useCase: useRestaurantCase,
+})
+
+// 5. Use in Navigator
+<Navigator initial="home">
+  <Navigator.Screen name="home" component={HomeScreen} />
+  <Navigator.Screen name="restaurant" component={RestaurantScreen} />
+</Navigator>
+```
+
+#### With Params Resolution
+
+Use `resolveParams` to fill in missing params from context (e.g., get first restaurant if no ID provided):
+
+```tsx
+import { defineScreen, type ResolverContext, type ResolveResult } from 'protomobilekit'
+
+// Resolver function - fills defaults, validates params
+function resolveRestaurantParams(
+  given: Partial<RestaurantParams>,
+  ctx: ResolverContext
+): ResolveResult<RestaurantParams> {
+  // If ID provided, use it
+  if (given.id) {
+    return { ok: true, params: { id: given.id } }
+  }
+
+  // Otherwise, get first restaurant
+  const restaurant = ctx.repo('Restaurant').first()
+  if (restaurant) {
+    return { ok: true, params: { id: restaurant.id } }
+  }
+
+  // No restaurant available
+  return { ok: false, reason: 'No restaurants available' }
+}
+
+export const RestaurantScreen = defineScreen({
+  appId: 'customer',
+  name: 'restaurant',
+  View: RestaurantView,
+  useCase: useRestaurantCase,
+  resolveParams: resolveRestaurantParams,  // ← Added
+})
+```
+
+#### With URL Params Coercion
+
+Use `paramsCodec` to convert URL string params to typed values:
+
+```tsx
+import { defineScreen, coerce, coerceString } from 'protomobilekit'
+
+// Codec for URL → typed params conversion
+const restaurantParamsCodec = {
+  coerce: (raw: Record<string, unknown>) => ({
+    id: coerceString(raw.id),
+  }),
+  serialize: (params: RestaurantParams) => ({
+    id: params.id,
+  }),
+}
+
+export const RestaurantScreen = defineScreen({
+  appId: 'customer',
+  name: 'restaurant',
+  View: RestaurantView,
+  useCase: useRestaurantCase,
+  resolveParams: resolveRestaurantParams,
+  paramsCodec: restaurantParamsCodec,  // ← Added
+})
+```
+
+#### ResolverContext API
+
+The `ctx` object in `resolveParams` provides type-safe data access:
+
+```tsx
+function resolveParams(given: Partial<Params>, ctx: ResolverContext) {
+  // Access entity repository
+  const restaurant = ctx.repo('Restaurant').first()
+  const order = ctx.repo('Order').get(given.orderId)
+  const pending = ctx.repo('Order').find(o => o.status === 'pending')
+  const all = ctx.repo('Order').all()
+
+  // Access fixture refs (deterministic defaults)
+  const defaultId = ctx.ref('customer', 'defaultRestaurantId')
+
+  // Current user
+  const user = ctx.user
+
+  // App ID
+  const appId = ctx.appId
+
+  return { ok: true, params: { ... } }
+}
+```
+
+#### Type-Safe Entities (Module Augmentation)
+
+For full type safety in `ctx.repo()`, augment the EntityMap:
+
+```tsx
+// src/entities/types.ts
+import type { Restaurant, Order, Dish } from './index'
+
+declare module 'protomobilekit' {
+  interface EntityMap {
+    Restaurant: Restaurant
+    Order: Order
+    Dish: Dish
+  }
+}
+```
+
+Now `ctx.repo('Restaurant')` returns `EntityRepo<Restaurant>` with proper typing.
+
+#### Fixture Refs
+
+Set deterministic default values for screens accessed via DevTools or direct URL:
+
+```tsx
+import { setFixtureRefs } from 'protomobilekit'
+
+// Set after seeding data
+setFixtureRefs('customer', {
+  defaultRestaurantId: 'r1',
+  defaultOrderId: 'o1',
+})
+
+// Use in resolveParams
+function resolveParams(given, ctx) {
+  const id = given.id ?? ctx.ref('customer', 'defaultRestaurantId')
+  // ...
+}
+```
+
+#### Coerce Helpers
+
+Built-in helpers for URL param coercion:
+
+```tsx
+import {
+  coerceString,   // unknown → string | undefined
+  coerceNumber,   // unknown → number | undefined
+  coerceBoolean,  // unknown → boolean | undefined
+  coerceEnum,     // unknown → EnumValue | undefined
+  coerceJson,     // unknown → ParsedJSON | undefined
+} from 'protomobilekit'
+
+const paramsCodec = {
+  coerce: (raw) => ({
+    id: coerceString(raw.id),
+    page: coerceNumber(raw.page),
+    active: coerceBoolean(raw.active),
+    status: coerceEnum(raw.status, ['pending', 'completed'] as const),
+    filters: coerceJson(raw.filters),
+  }),
+  serialize: (params) => ({ ... }),
+}
+```
+
+#### File Structure
+
+Recommended structure for defineScreen:
+
+```
+screens/
+└── restaurant/
+    ├── index.ts           # defineScreen + exports
+    ├── types.ts           # Params, State, Actions, VM types
+    ├── RestaurantView.tsx # Pure UI component
+    ├── useRestaurantCase.ts # useCase hook
+    ├── resolve.ts         # resolveParams function
+    └── params.ts          # paramsCodec
+```
 
 ---
 
