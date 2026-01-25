@@ -94,4 +94,6 @@ export interface CanvasConfig {
   showLabels?: boolean
   /** Hide exit fullscreen button in fullscreen mode */
   hideExitFullscreen?: boolean
+  /** Show device frame in fullscreen mode (useful for screenshots) */
+  showFrameInFullscreen?: boolean
 }

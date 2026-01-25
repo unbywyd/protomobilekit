@@ -20,6 +20,10 @@ import {
   parseHash,
   buildHash,
 } from './registry'
+import {
+  registerScreenComponent,
+  unregisterScreenComponents,
+} from '../preview'
 import type {
   NavigatorProps,
   ScreenDefinition,
@@ -118,6 +122,7 @@ export function Navigator({
   const isIOS = platform === 'ios'
   const isTabs = type === 'tabs'
   const isUpdatingFromHash = useRef(false)
+  const appContext = useAppContext()
 
   // Extract screens from children
   const screens = useMemo(() => {
@@ -153,9 +158,19 @@ export function Navigator({
           activeIcon: screen.activeIcon,
         } : undefined
       )
+      // Also register component for preview mode
+      registerScreenComponent(
+        screen.name,
+        screen.component,
+        id,
+        appContext?.appId
+      )
     })
-    return () => unregisterNavigatorScreens(id)
-  }, [screens, id, type])
+    return () => {
+      unregisterNavigatorScreens(id)
+      unregisterScreenComponents(id, appContext?.appId)
+    }
+  }, [screens, id, type, appContext?.appId])
 
   // Get initial route from hash if enabled
   const getInitialRoute = useCallback((): Route => {
@@ -267,8 +282,6 @@ export function Navigator({
   }, [useHash, screens, state, navigate])
 
   // Register navigator with frame registry for this app
-  const appContext = useAppContext()
-
   useEffect(() => {
     if (appContext?.appId) {
       registerNavigator(appContext.appId, { navigate, goBack, replace, reset })

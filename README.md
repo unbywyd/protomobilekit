@@ -15,6 +15,7 @@ React component library for rapid mobile app prototyping. Build iOS and Android-
 - [Core Concepts](#core-concepts)
   - [Canvas & Apps](#canvas--apps)
   - [Canvas SDK](#canvas-sdk)
+  - [Preview Mode](#preview-mode)
   - [Navigation](#navigation)
   - [State Management](#state-management)
   - [Authentication](#authentication)
@@ -639,6 +640,146 @@ const unsubscribe = canvas.subscribe(() => {
 // Reset state
 canvas.reset()                       // Show all, exit fullscreen
 ```
+
+#### Canvas Props
+
+```tsx
+<Canvas
+  apps={apps}
+  layout="row"
+  gap={32}
+  scale={1}
+  showLabels={true}
+  background="#f3f4f6"
+  // Fullscreen mode options
+  hideExitFullscreen={false}     // Hide "Exit Fullscreen" button
+  showFrameInFullscreen={false}  // Show device frame in fullscreen (for screenshots)
+/>
+```
+
+---
+
+### Preview Mode
+
+Preview mode allows rendering screens in isolation - without Navigator guards, with mock auth, and with device frames. Perfect for:
+- Automated screenshots
+- Documentation generation
+- Component testing
+- LLM/MCP integration
+
+#### usePreviewMode Hook
+
+Parse URL parameters to detect preview mode:
+
+```tsx
+// URL: /prototype?mode=preview&screen=home&user=user-1&app=customer
+
+import { usePreviewMode, ScreenPreview, Canvas } from 'protomobilekit'
+
+function App() {
+  const { isPreview, screenId, userId, appId } = usePreviewMode()
+
+  if (isPreview && screenId) {
+    return (
+      <ScreenPreview
+        screen={screenId}
+        appId={appId}
+        userId={userId}
+        showFrame={true}
+        device="iphone-14"
+      />
+    )
+  }
+
+  return <Canvas apps={apps} />
+}
+```
+
+#### ScreenPreview Component
+
+Render any registered screen in isolation:
+
+```tsx
+import { ScreenPreview } from 'protomobilekit'
+
+// Basic - no frame
+<ScreenPreview screen="home" appId="customer" />
+
+// With device frame (for screenshots)
+<ScreenPreview
+  screen="profile"
+  appId="customer"
+  userId="alice"           // Mock auth with test user
+  showFrame={true}
+  device="iphone-14"
+  scale={1}
+  platform="ios"
+/>
+
+// With route params
+<ScreenPreview
+  screen="order-details"
+  appId="customer"
+  params={{ orderId: 'o1' }}
+/>
+
+// Custom background
+<ScreenPreview
+  screen="home"
+  appId="customer"
+  background="#1a1a1a"
+/>
+```
+
+#### MockAuthProvider
+
+Wrap components with mock auth state (used internally by ScreenPreview):
+
+```tsx
+import { MockAuthProvider } from 'protomobilekit'
+
+// Using test user from registry
+<MockAuthProvider appId="customer" userId="alice">
+  <ProfileScreen />
+</MockAuthProvider>
+
+// Using direct user object
+<MockAuthProvider user={{ id: '1', name: 'Test', phone: '+123' }}>
+  <ProfileScreen />
+</MockAuthProvider>
+
+// Unauthenticated state
+<MockAuthProvider isAuthenticated={false}>
+  <LoginScreen />
+</MockAuthProvider>
+```
+
+#### Screenshot Automation Example
+
+```javascript
+// Puppeteer script for automated screenshots
+const screens = ['home', 'orders', 'profile', 'settings']
+const users = ['alice', 'bob']
+
+for (const screen of screens) {
+  for (const user of users) {
+    const url = `http://localhost:5173/prototype?mode=preview&screen=${screen}&user=${user}&app=customer`
+    await page.goto(url)
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `screenshots/${screen}-${user}.png` })
+  }
+}
+```
+
+#### URL Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `mode` | Must be `preview` to enable preview mode | `mode=preview` |
+| `screen` | Screen name to render | `screen=home` |
+| `user` | Test user ID for mock auth | `user=alice` |
+| `app` | App ID | `app=customer` |
+| `navigator` | Navigator ID (default: `main`) | `navigator=main` |
 
 #### Global SDK for Automation (MCP/Puppeteer)
 
@@ -2708,17 +2849,20 @@ formatCurrency(5000, 'RUB')    // "5 000 ₽"
 <Onboarding
   slides={[
     {
-      image: '/onboarding-1.png',
+      // URL string - rendered as <img>
+      image: 'https://images.unsplash.com/photo-1234',
       title: 'Welcome',
       description: 'Start your journey with us',
     },
     {
+      // Local path - rendered as <img>
       image: '/onboarding-2.png',
       title: 'Easy Ordering',
       description: 'Order your favorite food in seconds',
     },
     {
-      image: '/onboarding-3.png',
+      // React node (emoji, icon, component)
+      image: <span className="text-6xl">🚀</span>,
       title: 'Fast Delivery',
       description: 'Get your order delivered quickly',
     },
@@ -2897,6 +3041,90 @@ function MyComponent() {
     <Button>{locale.submit}</Button>  // Localized text
   )
 }
+```
+
+### i18n & RTL Support
+
+Many components support custom button texts and RTL direction:
+
+#### OTPAuth
+
+```tsx
+<OTPAuth
+  dir="rtl"
+  texts={{
+    phoneTitle: 'הזן מספר טלפון',
+    phoneSubtitle: 'נשלח לך קוד אימות',
+    continueButton: 'המשך',
+    codeTitle: 'הזן קוד',
+    verifyButton: 'אמת',
+    wrongNumber: 'מספר שגוי?',
+    resendCode: 'שלח שוב',
+    // ... all texts customizable
+  }}
+  onSuccess={() => navigate('home')}
+/>
+```
+
+#### DatePicker, TimePicker, Calendar
+
+```tsx
+<DatePicker
+  dir="rtl"
+  cancelText="ביטול"
+  doneText="אישור"
+  value={date}
+  onChange={setDate}
+/>
+
+<TimePicker
+  dir="rtl"
+  cancelText="ביטול"
+  doneText="סיום"
+  value={time}
+  onChange={setTime}
+/>
+```
+
+#### BottomSheet, ActionSheet, Alert, Confirm
+
+```tsx
+<BottomSheet cancelText="ביטול" />
+
+<ActionSheet cancelLabel="ביטול" />
+
+<Alert cancelText="ביטול" />
+
+<Confirm
+  cancelText="ביטול"
+  confirmText="אישור"
+/>
+
+<Prompt
+  cancelText="ביטול"
+  submitText="שלח"
+/>
+```
+
+#### SearchableSelect, Autocomplete
+
+```tsx
+<SearchableSelect
+  emptyText="לא נמצאו תוצאות"
+  doneText="סיום"
+/>
+
+<Autocomplete
+  emptyText="לא נמצאו תוצאות"
+  doneText="בחר"
+/>
+```
+
+#### RTL Notes
+
+- Phone and OTP inputs are always LTR (numbers read left-to-right)
+- Calendar navigation arrows swap direction in RTL
+- Use logical CSS properties (`paddingInlineStart/End`) for RTL support
 ```
 
 ---

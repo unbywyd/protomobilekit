@@ -104,6 +104,7 @@ export function Canvas({
   scale = 1,
   showLabels = true,
   hideExitFullscreen = false,
+  showFrameInFullscreen = false,
   className,
 }: CanvasProps) {
   const { hiddenApps, fullscreenApp, exitFullscreen } = useCanvasState()
@@ -120,13 +121,16 @@ export function Canvas({
     freeform: 'relative',
   }
 
-  // Fullscreen mode - render single app without frame
+  // Fullscreen mode - render single app
   if (fullscreenApp) {
     const app = apps.find(a => a.id === fullscreenApp)
     if (app) {
       return (
         <div
-          className="min-h-screen w-full flex flex-col"
+          className={cn(
+            "min-h-screen w-full flex flex-col",
+            showFrameInFullscreen && "items-center justify-center p-8"
+          )}
           style={{ backgroundColor: background }}
         >
           {/* Exit fullscreen button */}
@@ -144,9 +148,21 @@ export function Canvas({
 
           {/* Fullscreen app content */}
           <AppContext.Provider value={{ appId: app.id, appName: app.name }}>
-            <div className="flex-1 w-full max-w-[720px] mx-auto overflow-auto">
-              {app.component()}
-            </div>
+            {showFrameInFullscreen ? (
+              <DeviceFrame
+                device={app.device}
+                config={app.deviceConfig}
+                scale={scale}
+                showLabel={showLabels}
+                label={app.name}
+              >
+                {app.component()}
+              </DeviceFrame>
+            ) : (
+              <div className="flex-1 w-full max-w-[720px] mx-auto overflow-auto">
+                {app.component()}
+              </div>
+            )}
           </AppContext.Provider>
         </div>
       )
